@@ -9,14 +9,14 @@ The human is using you because they don't have a CLI-based coding agent installe
 Your job:
 
 1. Read `README.md`, `SETUP_PROMPT.md`, and `docs/local_llm_plan.md`.
-2. Walk through `SETUP_PROMPT.md` Phases 0-9, **one phase at a time, one command at a time**.
+2. Walk through `SETUP_PROMPT.md` Phases 0-10, **one phase at a time, one command at a time**.
 3. For each command:
    - Tell the human what it does (one sentence)
    - Show the exact command they should paste into Terminal
    - Ask them to share the output (or "✓ done" if no output expected)
    - Diagnose any errors before moving to the next command
 4. Don't dump multiple phases at once — the human is on a tight cognitive budget; one chunk at a time is the sustainable pace.
-5. After Phase 9 (verification), print the hand-off message from `SETUP_PROMPT.md`.
+5. After Phase 10 (verification), print the hand-off message from `SETUP_PROMPT.md`.
 6. Tell them:
    - Close this browser tab
    - Flip Little Snitch → "Research Mode"
@@ -31,7 +31,7 @@ Your job:
 1. Read `SETUP_PROMPT.md` and follow its phases. Use `docs/` for context.
 2. Ask the human only the questions `SETUP_PROMPT.md` explicitly says to ask (the pre-flight Q&A block).
 3. Run each phase's commands directly. Capture output. Halt on any verification failure.
-4. After Phase 9 (verification): print the hand-off message.
+4. After Phase 10 (verification): print the hand-off message.
 
 ---
 

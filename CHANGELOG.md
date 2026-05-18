@@ -1,5 +1,69 @@
 # Changelog
 
+## [0.8.0] — 2026-05-18 — Phase renumber + real ceddcozum integration (tools, not data)
+
+### Changed — phases renumbered (no decimals)
+
+Per Bora: "do not do decimal phases. rename them if needed. no moat. no backwards compat."
+
+Old → New:
+
+| Old | New | Phase |
+|---|---|---|
+| 0 | 0 | Pre-flight Infrastructure |
+| 1 | 1 | Inference Layer |
+| 2 | 2 | Skills + Hooks + System Prompts |
+| 3 | 3 | Python + R + Quarto + TeX |
+| 4 + 4.5 (merged) | 4 | Caches + Zotero + Journal Guidelines + Field Preset |
+| — | **5** | **ceddcozum Tool Integration** (NEW) |
+| 5 | 6 | Style Calibration |
+| 6 | 7 | Daily-Use GUI |
+| 7 | 8 | Air-gap Configuration |
+| 8 | 9 | Cron / Scheduled Tasks |
+| 9 | 10 | Verification Suite |
+
+Total: 11 phases (0-10). All references in README, AGENTS.md, and SETUP_PROMPT.md updated.
+
+### Fixed — ceddcozum integration: it's a CLI for 33 calculators, not a data export tool
+
+Looked at the actual published package (`ceddcozum@0.2.2`, `npm install -g ceddcozum`). The `--export-references` command I'd assumed in v0.7.0 doesn't exist and **shouldn't exist** — the package is a CLI dispatch for 33 pediatric clinical calculators, with Neyzi LMS data baked INSIDE the calculator functions. The right integration is exposing the 33 calculators as **agent-callable tools**, not extracting their data.
+
+The package already designed for LLM-agent use:
+- `ceddcozum --schemas` dumps all 33 tool schemas in OpenAI function-calling format
+- `ceddcozum <tool> --args '{"...":"..."}'` invokes with JSON args
+- `ceddcozum <tool> --format json` returns parsed output
+
+New Phase 5 implementation:
+```bash
+npm install -g ceddcozum
+mkdir -p ~/.agents/tools
+ceddcozum --schemas > ~/.agents/tools/ceddcozum-schemas.json
+cp -r ~/local-agent-setup/skills/coding/bora/ceddcozum-tools ~/.agents/skills/coding/bora/
+```
+
+New skill `skills/coding/bora/ceddcozum-tools/SKILL.md` is a schema-driven dispatcher that:
+- Looks up tool from `ceddcozum-schemas.json`
+- Validates args against the tool's JSON Schema (fail-loud per Karpathy rule #12)
+- Invokes `ceddcozum <tool> --args '...' --format json`
+- Returns parsed result
+
+**Result**: the local Qwen gets 33 live calculators in its tool palette — auxology, IGF SDS, BMD SDS+vBMD, HbA1c↔glucose conversion, HOMA-IR/QUICKI, steroid equivalents, blood pressure percentiles, thyroid volume SDS, etc. All local, no network.
+
+Removed the broken Phase 4 `npx ceddcozum --export-references` block; replaced with a comment pointing at Phase 5.
+
+### Decisions
+
+- No backwards-compatibility shims for the renumbering (nothing is released yet, no users to break)
+- The schema-driven dispatch in ceddcozum-tools auto-picks up new calculators when Bora ships `ceddcozum@0.3+`
+- Lazy-load of tools: session-launch decides which subset of 33 schemas to inject (default: Growth + Diabetes most common)
+
+### Open
+
+- Hermes Agent + `ceddcozum-tools` skill: needs actual integration test (`ceddcozum auxology` from inside a Hermes session)
+- Documentation pointing AGENTS.md / browser-AI flow at the 33-tool palette so they know to suggest these tools instead of asking the model to compute SDS manually
+
+---
+
 ## [0.7.0] — 2026-05-18 — Browser-AI-first setup flow + field-preset generation at setup time + npx ceddcozum + direnv mandatory
 
 ### Changed — setup audience expanded to browser AIs

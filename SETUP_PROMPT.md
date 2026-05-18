@@ -434,28 +434,10 @@ bash ~/local-agent-setup/scripts/download-guidelines.sh \
     --societies "magicapp,ispad,espe,cedd,aap,ata" \
     --output ~/Research/cache/guidelines/
 
-# Normative reference data (growth charts, lab refs)
-# Strategy: prefer Bora's existing ceddcozum NPM package (most curated peds-endo
-# references already exist there); fall back to scripts/download-references.sh
-# for sources not in ceddcozum (WHO/CDC).
-
-if [ "$FIELD_SLUG" = "pediatric-endocrinology" ] || [ "${USE_CEDDCOZUM:-yes}" = "yes" ]; then
-    if command -v npx >/dev/null 2>&1; then
-        # ceddcozum has Neyzi LMS + other Turkish peds-endo references curated.
-        # If --export-references is not yet available in the package, this is
-        # a TODO for Bora to add it. Best-effort:
-        npx -y ceddcozum@latest --export-references --output ~/Research/cache/references/ 2>/dev/null || {
-            echo "  ℹ️  ceddcozum --export-references not available."
-            echo "     TODO for Bora: add 'export-references' command to ceddcozum CLI."
-            echo "     For now: clone the source + copy data files manually:"
-            echo "       git clone https://github.com/borean/ceddcozum /tmp/ceddcozum-src"
-            echo "       cp -r /tmp/ceddcozum-src/src/data/* ~/Research/cache/references/"
-            echo "       (verify the path; tool may have refactored)"
-        }
-    fi
-fi
-
-# Generic fallback — runs always to fill WHO/CDC and pointer files
+# Normative reference data (WHO/CDC growth charts, lab refs)
+# Note: ceddcozum-style Neyzi LMS data lives INSIDE the ceddcozum CLI tool
+# (33 calculator functions in v0.2.2). We integrate that in Phase 5 as
+# live callable tools, not as exported data. Don't try to extract here.
 bash ~/local-agent-setup/scripts/download-references.sh \
     --output ~/Research/cache/references/
 
@@ -468,7 +450,7 @@ git clone --depth=1 https://github.com/quarto-journals/elsevier ~/Research/cache
 
 ---
 
-## PHASE 4.5 — FIELD PRESET GENERATION (~10 min, requires brief online window)
+### Field preset generation (continuation of Phase 4 — uses the journal-guidelines cache)
 
 Generate the user's field-specific voice baseline **fresh from current author guidelines**, not from hardcoded stubs. This is "real-time" generation:
 
@@ -532,7 +514,49 @@ If the user's field isn't in the case statement above, prompt: "What 3-5 journal
 
 ---
 
-## PHASE 5 — STYLE CALIBRATION (one-shot, ~5 min)
+## PHASE 5 — CEDDCOZUM TOOL INTEGRATION (~5 min)
+
+Bora's `ceddcozum` NPM package (v0.2.2) exposes **33 pediatric clinical calculators as a CLI** with OpenAI-compatible tool schemas. It's already designed for LLM agent use — see `ceddcozum --help` output (`--schemas`, `--args '{"...":"..."}'`).
+
+We integrate it as a **tool palette** for the local Qwen, not as a static data export. Every one of its 33 calculators becomes callable by the agent during a session.
+
+```bash
+# Install globally (works on Mac via Homebrew Node; on other systems via nvm)
+npm install -g ceddcozum
+
+# Verify
+ceddcozum --version  # should print "0.2.2" or later
+ceddcozum --list | head -5
+
+# Dump all tool schemas to a location our agent harness can read
+mkdir -p ~/.agents/tools
+ceddcozum --schemas > ~/.agents/tools/ceddcozum-schemas.json
+echo "✓ Dumped $(jq 'length' ~/.agents/tools/ceddcozum-schemas.json) tool schemas"
+
+# Quick sanity test — invoke a calculator with JSON args
+ceddcozum auxology --args '{"sex":"male","age":5.5,"height":110,"weight":19}' --format json | jq .
+
+# Install the wrapper that Hermes Agent will use to dispatch calls
+# (This skill becomes available immediately; details in skills/coding/bora/ceddcozum-tools/SKILL.md)
+cp -r ~/local-agent-setup/skills/coding/bora/ceddcozum-tools ~/.agents/skills/coding/bora/
+```
+
+What the agent can do after this phase:
+
+- Compute SDS / percentiles for height, weight, BMI, head circumference (Neyzi, WHO, CDC, IAP references)
+- Compute IGF-1 SDS by age + sex
+- Convert HbA1c ↔ glucose ↔ fructosamine
+- Compute HOMA-IR, QUICKI, glucose:insulin ratio
+- Compute BMD SDS + volumetric BMD correction
+- Convert steroid doses (glucocorticoid equivalents)
+- Compute pediatric blood pressure percentiles
+- ...all 33 tools from `ceddcozum --list`
+
+Every call runs **locally**. No network. No PHI leaves the laptop. The agent dispatches via the wrapper skill, which validates inputs against the schema before invoking the CLI.
+
+---
+
+## PHASE 6 — STYLE CALIBRATION (one-shot, ~5 min)
 
 ```bash
 # If first_paper: false, ask user for paths to 3-5 of their published papers
@@ -556,7 +580,7 @@ cat ~/.agents/system-prompts/${USERNAME}-voice.md | head -20
 
 ---
 
-## PHASE 6 — DAILY-USE GUI (Hermes Agent Desktop, ~5 min)
+## PHASE 7 — DAILY-USE GUI (Hermes Agent Desktop, ~5 min)
 
 ```bash
 # Install Hermes Agent Desktop
@@ -586,7 +610,7 @@ osascript -e 'tell application "System Events" to get name of every process' | g
 
 ---
 
-## PHASE 7 — AIR-GAP CONFIGURATION (~10 min)
+## PHASE 8 — AIR-GAP CONFIGURATION (~10 min)
 
 ```bash
 # Little Snitch — install if not present
@@ -628,7 +652,7 @@ echo "${IRB_ID}" > ~/Research/audit/$(date +%F)/irb-id.txt
 
 ---
 
-## PHASE 8 — CRON / LAUNCHD SCHEDULED TASKS (~5 min)
+## PHASE 9 — CRON / LAUNCHD SCHEDULED TASKS (~5 min)
 
 ```bash
 # 7 air-gap cron tasks per docs/v3_changes.md
@@ -651,7 +675,7 @@ launchctl list | grep -E 'airgap-nightly-handoff|llama-server-health|audit-rotat
 
 ---
 
-## PHASE 9 — VERIFICATION SUITE (~10 min)
+## PHASE 10 — VERIFICATION SUITE (~10 min)
 
 Run these in order; halt on any failure.
 

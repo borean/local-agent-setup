@@ -43,7 +43,7 @@ A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM
 
    > Read https://github.com/borean/local-agent-setup — especially SETUP_PROMPT.md, AGENTS.md, and README.md. Then guide me through setting up the air-gapped medical research LLM environment described in the repo. I'll run terminal commands myself; you tell me what to type and what to expect. Walk through one phase at a time. Wait for me to confirm each step before moving on.
 
-3. The browser AI reads the repo and walks you through Phases 0-9, one terminal command at a time. You paste each command into your Mac's Terminal app (Cmd-Space → "Terminal").
+3. The browser AI reads the repo and walks you through Phases 0-10, one terminal command at a time. You paste each command into your Mac's Terminal app (Cmd-Space → "Terminal").
 4. When the AI gets to the hand-off step:
    - Close the browser AI tab
    - Flip Little Snitch → "Research Mode"
@@ -63,7 +63,7 @@ cd ~/local-agent-setup
 # Open Claude Code, Codex, or Gemini CLI in this directory
 # Tell it:
 ```
-> Read SETUP_PROMPT.md and execute Phases 0-9. Use the verification suite. Write lessons to ~/.research/lessons.md. Print the hand-off message when done.
+> Read SETUP_PROMPT.md and execute Phases 0-10. Use the verification suite. Write lessons to ~/.research/lessons.md. Print the hand-off message when done.
 
 The CLI path is ~30% faster (the agent runs commands directly) but requires you to already have a coding-agent CLI. Both paths produce the same end state.
 
