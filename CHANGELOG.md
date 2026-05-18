@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.4.0] — 2026-05-18 — First-paper users + orchestrator
+
+### Added
+
+- **`research/manuscript/clinical-data-to-manuscript`** — 15-phase orchestrator skill that composes ~20 of our skills from raw dataset → submission-ready manuscript. Adapted from Bora's existing `manuscript-from-clinical-data`, optimized for air-gapped Qwen 3.6 with Material Passport at every major breakpoint. Two modes (`guided` for first-paper users, `express` for experienced). Resumable from any passport.
+- **`references/first-paper-onboarding.md`** — explainer for users writing their first manuscript. Expected timeline (12-25 hours across 8 sessions). What to skip until later. What NOT to do.
+
+### Changed
+
+- **`style-calibration`** rewritten to be deferrable. Three modes:
+  - `calibrate` (default for users with ≥3 published papers)
+  - `generic` (loads field-specific baseline — pediatric endo / oncology / IM / surgery — for first-paper users)
+  - `defer` (skip entirely; reminder every 10 sessions)
+  - Frontmatter: `optional: true, deferrable: true`
+- **`devils-advocate`** rewritten to be deferrable. Three modes:
+  - `calibrated` (default for users with ≥5 accepted papers)
+  - `uncalibrated` (first-paper users — generic Cochrane/STROBE/CONSORT reviewer patterns; output stamped with explicit caveat)
+  - `defer` (skip entirely; reminder every 20 sessions)
+  - Frontmatter: `optional: true, deferrable: true`
+
+### Why these changes
+
+User feedback: "what if the user is gonna write their first paper in life?" Both skills assume a corpus of the user's own published work. We needed graceful degradation paths so first-paper users can still benefit from the writing/critique infrastructure.
+
+### Decisions
+
+- **Generic-mode field presets**: pediatric endocrinology (ESPE Yearbook + JCEM), oncology (Lancet Oncology), internal medicine (NEJM), surgery (Annals of Surgery). Easily extensible.
+- **Devil's Advocate uncalibrated mode** uses Cochrane methodological critiques + STROBE/CONSORT supplementary materials + EQUATOR Network reporting guidelines as its generic-reviewer corpus.
+- **Orchestrator delegates, never duplicates**: every phase calls a single-purpose skill we already have. Material Passport at 6 major breakpoints means any phase failure is recoverable.
+
+### Open
+
+- Generic-mode field presets are placeholders; real journal-specific style sheets need population
+- `clinical-data-to-manuscript` has 15 phases; the Phase-N implementations are wrappers around existing skills, no new code needed, but the orchestrator state machine itself needs implementation
+- First-paper-onboarding reminders fire from `session-start-airgap.sh` — needs the hook update
+
+---
+
 ## [0.3.0] — 2026-05-18 — Bulk skill+hook+cron implementation
 
 ### Added — meta/reference files
