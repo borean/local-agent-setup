@@ -1,0 +1,96 @@
+# medical-research-requirements.txt
+# Curated Python package set for air-gapped medical research stack.
+# Installs via: uv pip install -r medical-research-requirements.txt
+# Wheelhouse: uv pip download -r medical-research-requirements.txt -d ~/.research/wheelhouse/
+#
+# Pins are wide-range (>=) for first install; setup-phase locks via `uv pip freeze`
+# into medical-research-venv.lock for reproducibility.
+
+# ─── Core data & stats ────────────────────────────────────────────────────
+pandas>=2.2
+numpy>=1.26
+scipy>=1.12
+scikit-learn>=1.5
+statsmodels>=0.14
+pingouin>=0.5         # clinical-stats friendly p-values + effect sizes
+lifelines>=0.27       # survival analysis
+pyarrow>=15           # parquet
+polars>=1.0           # alternative dataframe, fast
+duckdb>=1.0           # SQL on parquet/CSV
+
+# ─── Bayesian + ML ────────────────────────────────────────────────────────
+pymc>=5.10
+arviz>=0.17
+shap>=0.45
+
+# ─── Visualization ────────────────────────────────────────────────────────
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.20
+altair>=5.3
+colorspacious>=1.1   # color-blind safety checks per references/data-viz-upgrade-PR.md
+
+# ─── Medical / clinical ───────────────────────────────────────────────────
+biopython>=1.83
+pydicom>=2.4
+fhir.resources>=7.1
+presidio-analyzer>=2.2
+presidio-anonymizer>=2.2
+
+# ─── Document processing ─────────────────────────────────────────────────
+pdfplumber>=0.11
+pymupdf>=1.24
+docling>=1.0          # IBM, best for medical PDFs with tables/equations
+python-docx>=1.1
+openpyxl>=3.1
+
+# ─── Local LLM clients + tool calling ────────────────────────────────────
+openai>=1.30          # Hermes Agent's actual dep
+anthropic>=0.30       # optional for some skills
+ollama>=0.3           # ollama Python client (for backwards compat with any user using Ollama)
+pydantic>=2.6
+pydantic-ai>=0.0.7    # structured output if needed
+instructor>=1.3       # Ollama-mode auto-selection
+outlines>=0.1         # constrained generation (fallback to GBNF for production)
+
+# ─── PaperQA2 + literature ────────────────────────────────────────────────
+paper-qa>=5.0         # Future House scientific RAG
+leann-core>=0.5
+leann-backend-hnsw>=0.5
+leann>=0.5
+
+# ─── Notebook + Quarto ────────────────────────────────────────────────────
+jupyter>=1.0
+ipykernel>=6.29
+ipywidgets>=8.1
+nbformat>=5.10
+nbconvert>=7.16
+
+# ─── Quality + dev ───────────────────────────────────────────────────────
+ruff>=0.4
+mypy>=1.10
+pytest>=8.2
+hypothesis>=6.100
+
+# ─── HTTP + small utilities ──────────────────────────────────────────────
+requests>=2.31
+requests-cache>=1.2
+httpx>=0.27
+pyyaml>=6.0
+tqdm>=4.66
+rich>=13.7
+
+# ─── Optional: Turkish NLP ───────────────────────────────────────────────
+zemberek-python>=0.2   # Turkish NLP — needed by Presidio TR recognizers
+# Note: zemberek requires JVM; install separately:  brew install openjdk@21
+
+# ─── Optional: OpenTelemetry (for hermes-raindrop bridge) ────────────────
+opentelemetry-api>=1.25
+opentelemetry-sdk>=1.25
+opentelemetry-exporter-otlp-proto-http>=1.25
+
+# ─── Eval framework ──────────────────────────────────────────────────────
+# inspect-ai installed separately via pipx (it's a CLI)
+
+# ─── litellm (proxy in front of llama-server) ────────────────────────────
+litellm>=1.40         # may also be installed via uv tool install

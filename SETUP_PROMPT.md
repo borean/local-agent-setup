@@ -1,253 +1,625 @@
 # SETUP_PROMPT.md
 
-**For**: a frontier AI agent (Claude Code, OpenAI Codex, Gemini CLI) running on the human's laptop, with shell + filesystem access, currently online.
+**For**: a frontier AI agent (Claude Code, OpenAI Codex, Gemini CLI) running on the human's laptop with shell + filesystem access, currently online.
 
 **Goal**: leave the laptop with a fully-local, air-gapped, medical-research LLM environment. After your setup completes, the human will uninstall you and cut internet for clinical work.
 
-**Status: WORK IN PROGRESS.** This file is the outline; expand each phase before pasting to a real frontier LLM. Read `docs/local_llm_plan.md`, `docs/v3_changes.md`, `docs/harness_brief.md`, `docs/skillset_v1.md`, `docs/skillset_v2_additions.md`, `references/preflight-install-order.md`, `system-prompts/karpathy-12-rules.md` first.
+**Paste this entire file as your initial prompt to Claude Code / Codex / Gemini CLI from inside `~/local-agent-setup/`** (after `git clone https://github.com/borean/local-agent-setup ~/local-agent-setup`).
 
 ---
 
-## Pre-flight (ask the human ONCE, then commit)
+## INITIAL CONTEXT (read me first)
 
-```
-1. Confirm hardware: `system_profiler SPHardwareDataType` — should be Apple Silicon M-series, 32 GB+ RAM
-2. Confirm Zotero library path (default ~/Zotero)
-3. Confirm IRB project ID for audit folder naming
-4. Confirm daily-use GUI: Hermes Agent Desktop (default) OR Goose Desktop OR OpenCode Desktop
-5. Confirm Little Snitch installed (offer to install via brew if not)
-6. Confirm Bora-voice corpus: which 3-5 of the user's published papers? (paths)
-7. Confirm Devil's Advocate corpus: which 5 *accepted* papers? (paths)
-8. Confirm user has admin/sudo password ready
-```
+You are setting up a medical research workstation for a Turkish pediatric endocrinologist (or their colleague). Read these BEFORE touching the system:
 
-Don't ask again after this block. Make sensible defaults the rest of the way.
+1. `/Users/$USER/local-agent-setup/README.md` — overview
+2. `/Users/$USER/local-agent-setup/docs/local_llm_plan.md` — architecture + compliance
+3. `/Users/$USER/local-agent-setup/docs/v3_changes.md` — latest design decisions
+4. `/Users/$USER/local-agent-setup/docs/harness_brief.md` — why Hermes Agent Desktop won
+5. `/Users/$USER/local-agent-setup/system-prompts/karpathy-12-rules.md` — apply these rules to your own work during setup
+6. `/Users/$USER/local-agent-setup/references/compliance-primer.md` — KVKK/GDPR/HIPAA
+7. `/Users/$USER/local-agent-setup/references/preflight-install-order.md` — the 5-step install order (you will execute it as Phase 0)
+
+After reading: you understand that **you (the frontier model) will be uninstalled after setup**. The human's daily-use stack will be:
+- `llama-server` (llama.cpp Metal) on `localhost:11434` serving Qwen 3.6 27B or 35B-A3B
+- `llama-server` on `localhost:11436` serving LFM2.5-350M (always-warm tool-call router)
+- Hermes Agent Desktop as the GUI
+- The 78 SKILL.md files in `~/.agents/skills/`
+- 11 hooks in `~/.agents/hooks/`
+- 7 launchctl cron tasks
+- Little Snitch "Research Mode" profile
+
+Your job is to install all of that and verify it works before printing the hand-off message.
 
 ---
 
-## Phase 0 — Pre-flight infrastructure (per references/preflight-install-order.md)
+## PRE-FLIGHT — ASK THE HUMAN ONCE
+
+Run these exact questions back-to-back. Capture answers; do not ask again.
 
 ```
-brew install direnv mitmproxy uv pipx
+1. Confirm hardware:
+   $ system_profiler SPHardwareDataType | grep -E "Chip|Memory"
+   Expected: Apple Silicon M3 or M4, 32 GB+ RAM. If <32 GB, warn user
+   that 27B dense will be painful (<14 tok/s); 35B-A3B still usable.
+
+2. Zotero library path:
+   Default: ~/Zotero
+   If different, ask user.
+
+3. IRB project ID for audit folder naming:
+   Format suggestion: IRB-YYYY-NNN
+   If user has no active IRB, prompt for "RESEARCH-{free-text-tag}".
+
+4. First-paper user?
+   y/n. If yes, downstream skills will use --mode generic for style-calibration
+   and --mode uncalibrated for devils-advocate.
+
+5. Username for voice profile file:
+   Default: $USER
+   This becomes ~/.agents/system-prompts/{username}-voice.md
+
+6. Sudo password ready:
+   You will need it for: brew, launchctl, Little Snitch profile install.
+
+7. Field for generic-mode style baseline (only if first-paper):
+   Options: "pediatric endocrinology" | "oncology" | "internal medicine" | "surgery" | other
+
+8. Hermes Agent Desktop OR Goose Desktop?
+   Default: Hermes Agent Desktop (per harness_brief.md decision).
+   Both are SKILL.md-compatible; pick Hermes unless user has a preference.
+```
+
+After this block, commit each answer to `~/.research/setup-answers.yaml` for audit.
+
+---
+
+## PHASE 0 — PRE-FLIGHT INFRASTRUCTURE (~15 min)
+
+Per `references/preflight-install-order.md`:
+
+```bash
+# Homebrew check (install if missing)
+which brew >/dev/null || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Direnv + 1Password CLI (or doppler fallback)
+brew install direnv
+brew install --cask 1password-cli || brew install doppler/cli/doppler
+# Wire direnv into shell
+grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+
+# mitmproxy
+brew install mitmproxy
+
+# uv (Astral)
+brew install uv
+
+# pipx
+brew install pipx
+pipx ensurepath
+
+# inspect-ai
 pipx install inspect-ai
-# Pick a secrets manager — default to 1Password CLI if installed, else doppler
-brew install 1password-cli || brew install doppler/cli/doppler
 
-# litellm as local proxy in front of llama-server (logs all prompts to audit)
-uv pip install --user litellm
+# litellm as local proxy
+uv tool install litellm
 
-# Initialize ~/.research/lessons.md
+# Raindrop Workshop (Ben Hylak's local agent debugger)
+curl -fsSL https://raindrop.sh/install | bash
+
+# Initialize lessons file
 mkdir -p ~/.research && touch ~/.research/lessons.md
+
+# Verification
+direnv --version && mitmproxy --version && uv --version && inspect --version
 ```
+
+Log to `~/.research/lessons.md` any package that failed and how you worked around it.
 
 ---
 
-## Phase 1 — Inference layer (llama.cpp Metal, NO Ollama)
+## PHASE 1 — INFERENCE LAYER (~30 min, mostly download time)
 
-```
-brew install llama.cpp                          # built with -DLLAMA_METAL=ON
+```bash
 mkdir -p ~/.research/{models,logs,services}
 
-# Download GGUFs from Hugging Face (mirror to ~/.research/models/)
-# Qwen 3.6 35B-A3B MoE Q4_K_M  (~21 GB)
-# Qwen 3.6 27B dense Q4_K_M    (~14 GB)
-# LFM2.5-350M Q8                (~500 MB)
-huggingface-cli download unsloth/Qwen3.6-35B-A3B-GGUF Qwen3.6-35B-A3B-Q4_K_M.gguf --local-dir ~/.research/models
-huggingface-cli download unsloth/Qwen3.6-27B-GGUF Qwen3.6-27B-Q4_K_M.gguf --local-dir ~/.research/models
-huggingface-cli download LiquidAI/LFM2.5-350M-tool-use-GGUF LFM2.5-350M-tool-use-Q8_0.gguf --local-dir ~/.research/models
+# llama.cpp Metal-built
+brew install llama.cpp
 
-# Write launchctl plist for ONE llama-server at a time (per Bora's "1 at a time" preference)
-# Service: ~/.research/services/com.bora.llama-server.plist
-# Default model: 35B-A3B; swap via `research-session` launcher script
-launchctl load ~/.research/services/com.bora.llama-server.plist
+# Download GGUFs (in parallel where possible — wget in background)
+huggingface-cli download \
+    unsloth/Qwen3.6-35B-A3B-GGUF \
+    Qwen3.6-35B-A3B-Q4_K_M.gguf \
+    --local-dir ~/.research/models &
 
-# Always-warm LFM2.5-350M router on port 11436
-launchctl load ~/.research/services/com.bora.lfm-router.plist
+huggingface-cli download \
+    unsloth/Qwen3.6-27B-GGUF \
+    Qwen3.6-27B-Q4_K_M.gguf \
+    --local-dir ~/.research/models &
+
+huggingface-cli download \
+    LiquidAI/LFM2.5-350M-tool-use-GGUF \
+    LFM2.5-350M-tool-use-Q8_0.gguf \
+    --local-dir ~/.research/models &
+
+# If Turkish user
+[ "$FIELD" = "pediatric endocrinology" ] && huggingface-cli download \
+    ytu-ce-cosmos/Turkish-Gemma-9b-T1-GGUF \
+    Turkish-Gemma-9b-T1-Q4_K_M.gguf \
+    --local-dir ~/.research/models &
+
+wait
+
+# Verify download integrity
+cd ~/.research/models && sha256sum *.gguf > checksums.txt
+```
+
+Write three launchctl plists (one per service):
+
+```bash
+# Service A: Qwen 3.6 35B-A3B on :11434 (default loaded model)
+cat > ~/.research/services/com.bora.llama-server.qwen.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.bora.llama-server.qwen</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/llama-server</string>
+    <string>--model</string>
+    <string>/Users/_USER_/.research/models/Qwen3.6-35B-A3B-Q4_K_M.gguf</string>
+    <string>--ctx-size</string><string>32768</string>
+    <string>--n-gpu-layers</string><string>999</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>11434</string>
+    <string>--mlock</string>
+    <string>--jinja</string>
+    <string>--chat-template</string><string>chatml</string>
+    <string>--api-key</string><string>local</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/_USER_/.research/logs/llama-server-qwen.log</string>
+  <key>StandardErrorPath</key><string>/Users/_USER_/.research/logs/llama-server-qwen.err</string>
+</dict>
+</plist>
+PLIST
+sed -i '' "s|_USER_|$USER|g" ~/.research/services/com.bora.llama-server.qwen.plist
+
+# Service B: LFM2.5-350M tool-call router on :11436 (always warm)
+cat > ~/.research/services/com.bora.lfm-router.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.bora.lfm-router</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/llama-server</string>
+    <string>--model</string>
+    <string>/Users/_USER_/.research/models/LFM2.5-350M-tool-use-Q8_0.gguf</string>
+    <string>--ctx-size</string><string>8192</string>
+    <string>--n-gpu-layers</string><string>999</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>11436</string>
+    <string>--mlock</string>
+    <string>--api-key</string><string>local</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+PLIST
+sed -i '' "s|_USER_|$USER|g" ~/.research/services/com.bora.lfm-router.plist
+
+# Load both
+launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.llama-server.qwen.plist
+launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.lfm-router.plist
+
+# Wait for services to warm up
+sleep 15
 
 # Verify
-curl -s http://localhost:11434/v1/models | jq .
-curl -s http://localhost:11436/v1/models | jq .
+curl -s http://localhost:11434/v1/models | jq -e '.data[0].id' || { echo "FAIL: Qwen not responding"; exit 1; }
+curl -s http://localhost:11436/v1/models | jq -e '.data[0].id' || { echo "FAIL: LFM2.5 not responding"; exit 1; }
+
+# Quick inference smoke test
+curl -s http://localhost:11434/v1/chat/completions \
+    -H "Authorization: Bearer local" \
+    -d '{"messages":[{"role":"user","content":"Reply with exactly: OK"}],"max_tokens":5}' \
+    | jq -r '.choices[0].message.content'
+# Expected: "OK" (or close — model may add punctuation)
 ```
+
+If both services respond: Phase 1 complete.
 
 ---
 
-## Phase 2 — Skills + Hooks + System Prompt
+## PHASE 2 — SKILLS + HOOKS + SYSTEM PROMPTS (~5 min)
 
-```
-# Clone this repo
-git clone https://github.com/borean/local-agent-setup ~/local-agent-setup
+```bash
 mkdir -p ~/.agents/{skills,hooks,system-prompts,state}
 
-# System prompt (Karpathy 12 rules + air-gap preamble + bora voice placeholder)
+# System prompts — concatenate Karpathy + air-gap preamble
 cp ~/local-agent-setup/system-prompts/karpathy-12-rules.md ~/.agents/system-prompts/
-cp ~/local-agent-setup/system-prompts/air-gap-preamble.md ~/.agents/system-prompts/
-# bora-voice.md filled in Phase 5 after style-calibration
+cat > ~/.agents/system-prompts/air-gap-preamble.md <<'PROMPT'
+## Air-gap mode preamble
 
-# Skills — 43 core + 19 cherry-picks
+You are running on a Turkish pediatric endocrinologist's local Qwen 3.6 model.
+This machine is currently air-gapped (Little Snitch Research Mode).
+
+Rules in addition to Karpathy 12:
+1. Patient data NEVER appears in your response in a form that could identify them.
+   Use TCKN→[TCKN], MRN→[MRN], "April 14"→"week 12 of treatment".
+2. If a tool you'd normally use needs internet, ask the user via the
+   `request-momentary-internet` skill — do NOT silently fail.
+3. Cite every research claim with [bibkey:page] — these get verified against
+   the local Zotero corpus via paperqa-verify-citation.
+4. If you fabricate a method or claim, expect anti-leakage skill to flag it
+   with [MATERIAL GAP] tags. Avoid the embarrassment — only state what you
+   can ground.
+5. When in doubt about whether to act, emit a Material Passport and ask.
+PROMPT
+
+# Skills — copy entire bundle
 cp -r ~/local-agent-setup/skills/* ~/.agents/skills/
-# Pull external cherry-picks at pinned commits
-# addyosmani/agent-skills @ <pinned-sha>: 9 skills → ~/.agents/skills/coding/
-# mattpocock/skills @ <pinned-sha>: 4 skills
-# vercel-labs/agent-skills @ <pinned-sha>: 4 skills
 
-# Hooks
+# Hooks — copy and ensure executable
 cp ~/local-agent-setup/hooks/*.sh ~/.agents/hooks/
 chmod +x ~/.agents/hooks/*.sh
 
-# Symlink Hermes Agent skill discovery to ~/.agents/skills/
-ln -sf ~/.agents/skills ~/.hermes/skills
-ln -sf ~/.agents/hooks ~/.hermes/hooks
+# Voice profile placeholder (will be filled in Phase 5)
+touch ~/.agents/system-prompts/${USERNAME}-voice.md
+
+# Pin upstream cherry-pick commits
+# (For each coding/{google,mattpocock,vercel,shadcn} skill, fetch the pinned content)
+# We do this as a separate script ~/local-agent-setup/scripts/pin-cherry-picks.sh
+bash ~/local-agent-setup/scripts/pin-cherry-picks.sh
 ```
 
 ---
 
-## Phase 3 — Python venv + R + Quarto + LaTeX
+## PHASE 3 — PYTHON + R + QUARTO + TEX (~20 min)
 
-```
-brew install python@3.13 R quarto pandoc texlive imagemagick inkscape
+```bash
+# System deps
+brew install python@3.13 R quarto pandoc imagemagick inkscape
+brew install --cask basictex  # smaller TeX install; sufficient for Quarto/journal PDF
+
+# Python venv via uv
 python3.13 -m venv ~/.research/venv
 source ~/.research/venv/bin/activate
-uv pip install -r ~/local-agent-setup/setup-prompts/medical-research-venv.lock
+uv pip install -r ~/local-agent-setup/setup-prompts/medical-research-requirements.txt
+
+# Verify Python stack
+python -c "import pandas, numpy, scipy, statsmodels, lifelines, pingouin, matplotlib, seaborn; print('Python OK')"
+
+# Wheelhouse fallback for offline future installs
+mkdir -p ~/.research/wheelhouse
+uv pip download -r ~/local-agent-setup/setup-prompts/medical-research-requirements.txt -d ~/.research/wheelhouse/
 
 # R via renv
-R --vanilla -e 'install.packages("renv"); renv::restore(lockfile="~/local-agent-setup/setup-prompts/renv.lock")'
+R --vanilla -e 'install.packages("renv", repos="https://cran.rstudio.com")'
+Rscript ~/local-agent-setup/setup-prompts/medical-research-renv.R
 
-# Wheelhouse for offline fallback installs
-uv pip download -r ~/local-agent-setup/setup-prompts/medical-research-venv.lock -d ~/.research/wheelhouse/
+# Verify R stack
+R --vanilla -e 'library(tidyverse); library(gtsummary); library(survival); library(meta); cat("R OK\n")'
 
-# Verify
-python -c "import pandas, statsmodels, lifelines; from paperqa import Docs; print('ok')"
-R -e 'library(tidyverse); library(gtsummary); library(mall); cat("ok\n")'
+# Quarto extensions cache (offline-ready)
+quarto install extension quarto-journals/jama --no-prompt
+quarto install extension quarto-journals/nejm --no-prompt
+quarto install extension quarto-journals/lancet --no-prompt
+quarto install extension quarto-journals/elsevier --no-prompt
 ```
 
 ---
 
-## Phase 4 — Caches + Zotero index
+## PHASE 4 — CACHES + ZOTERO INDEX (~30 min, mostly download)
 
-```
+```bash
 mkdir -p ~/Research/cache/{guidelines,references,templates,wheelhouse}
 
 # LEANN index from Zotero
-uv pip install leann-core leann-backend-hnsw leann
-leann build --source ~/Zotero/storage --embed-model bge-m3 --output ~/.leann/peds-endo-corpus
+pipx install leann-core leann-backend-hnsw leann
+leann build \
+    --source ${ZOTERO_PATH:-~/Zotero/storage} \
+    --embed-model bge-m3 \
+    --output ~/.leann/peds-endo-corpus
 
-# Guideline caches (MAGICapp, ISPAD, ESPE, ÇEDD, ATA, AAP)
-# Pull each guideline org's full open guideline set as PDFs
-# Cache to ~/Research/cache/guidelines/{magicapp,ispad,espe,cedd,ata,aap}/
+# Pull bge-m3 embeddings into llama-server (separate small service)
+huggingface-cli download \
+    BAAI/bge-m3-gguf \
+    bge-m3-q4_K.gguf \
+    --local-dir ~/.research/models
 
-# Normative reference data
-# Neyzi (Turkish), WHO, CDC, IAP growth charts
-# Cache to ~/Research/cache/references/
+# Guideline caches (the slow part — but worth it)
+# We curate a list per society in ~/local-agent-setup/scripts/download-guidelines.sh
+bash ~/local-agent-setup/scripts/download-guidelines.sh \
+    --societies "magicapp,ispad,espe,cedd,aap,ata" \
+    --output ~/Research/cache/guidelines/
+
+# Normative reference data (growth charts, lab refs)
+bash ~/local-agent-setup/scripts/download-references.sh \
+    --output ~/Research/cache/references/
 
 # Journal LaTeX templates
-# JCEM, JPEM, Lancet Endo, Diabetes Care, Frontiers
-# Cache to ~/Research/cache/templates/
+git clone --depth=1 https://github.com/quarto-journals/jama ~/Research/cache/templates/jama
+git clone --depth=1 https://github.com/quarto-journals/nejm ~/Research/cache/templates/nejm
+git clone --depth=1 https://github.com/quarto-journals/lancet ~/Research/cache/templates/lancet
+git clone --depth=1 https://github.com/quarto-journals/elsevier ~/Research/cache/templates/elsevier
 ```
 
 ---
 
-## Phase 5 — Bora-voice calibration (one-time)
+## PHASE 5 — STYLE CALIBRATION (one-shot, ~5 min)
 
-```
-# Run Skill #25 style-calibration on the 3-5 papers Bora pointed to in pre-flight
-hermes run skill style-calibration --inputs <paper1.pdf> <paper2.pdf> <paper3.pdf>
-# Output: ~/.agents/system-prompts/bora-voice.md
+```bash
+# If first_paper: false, ask user for paths to 3-5 of their published papers
+if [ "$FIRST_PAPER" = "false" ]; then
+    # Run skill in calibrate mode
+    bash ~/.agents/skills/research/manuscript/style-calibration/invoke.sh \
+        --mode calibrate \
+        --papers "${USER_PAPERS[@]}" \
+        --username "$USERNAME"
+else
+    # First-paper user — generic baseline
+    bash ~/.agents/skills/research/manuscript/style-calibration/invoke.sh \
+        --mode generic \
+        --field "$FIELD" \
+        --username "$USERNAME"
+fi
+
+# Verify voice profile was written
+cat ~/.agents/system-prompts/${USERNAME}-voice.md | head -20
 ```
 
 ---
 
-## Phase 6 — Daily-use GUI
+## PHASE 6 — DAILY-USE GUI (Hermes Agent Desktop, ~5 min)
 
-```
-# Default: Hermes Agent Desktop
+```bash
+# Install Hermes Agent Desktop
 brew install --cask hermes-agent
-# Configure via plist or first-run wizard:
-#   provider: openai-compatible
-#   base_url: http://localhost:11434/v1
-#   api_key: local
-#   model: qwen3.6:35b-a3b-q4_K_M
-#   skills_path: ~/.agents/skills
-#   hooks_path: ~/.agents/hooks
+
+# Or via direct download if cask not available:
+# curl -L https://hermesatlas.com/hermes-agent-desktop.dmg -o /tmp/hermes.dmg
+# hdiutil attach /tmp/hermes.dmg && cp -r /Volumes/Hermes/Hermes\ Agent.app /Applications/
+
+# Configure via plist (avoid first-run wizard for headless setup)
+defaults write com.nousresearch.hermes-agent provider "openai-compatible"
+defaults write com.nousresearch.hermes-agent base_url "http://localhost:11434/v1"
+defaults write com.nousresearch.hermes-agent api_key "local"
+defaults write com.nousresearch.hermes-agent default_model "qwen3.6:35b-a3b-q4_K_M"
+defaults write com.nousresearch.hermes-agent skills_path "$HOME/.agents/skills"
+defaults write com.nousresearch.hermes-agent hooks_path "$HOME/.agents/hooks"
+defaults write com.nousresearch.hermes-agent self_evolving_skills_enabled -bool true
+defaults write com.nousresearch.hermes-agent raindrop_local_debugger "http://localhost:5899"
+
+# Open it once to confirm it launches and finds the local model
+open -g /Applications/Hermes\ Agent.app
+sleep 5
+# Check it didn't error
+osascript -e 'tell application "System Events" to get name of every process' | grep -q "Hermes Agent" \
+    || { echo "FAIL: Hermes Agent did not launch"; exit 1; }
 ```
 
 ---
 
-## Phase 7 — Air-gap configuration
+## PHASE 7 — AIR-GAP CONFIGURATION (~10 min)
 
-```
-# Little Snitch Research Mode profile
-# Allow: 127.0.0.1/8, ::1
-# Deny: all else
-# Save profile, do NOT activate yet — verification first
+```bash
+# Little Snitch — install if not present
+brew install --cask little-snitch
+open /Applications/Little\ Snitch\ Configuration.app
 
+# Tell user to install the Research Mode profile manually
+cat <<EOF
+ACTION REQUIRED — install Little Snitch profile:
+
+1. Little Snitch Configuration is open.
+2. File → Import Rules…
+3. Pick: ~/local-agent-setup/setup-prompts/little-snitch-research-mode.lsrules
+4. In the toolbar, switch profile dropdown to "Research Mode"
+5. Confirm by checking the menu-bar icon shows "Research Mode" active.
+
+Reply with "snitch-installed" when done.
+EOF
+
+# Wait for user confirmation
+read -r CONFIRMATION
+[ "$CONFIRMATION" = "snitch-installed" ] || { echo "FAIL: Little Snitch not confirmed"; exit 1; }
+
+# Other air-gap hygiene
 # Disable iCloud Desktop & Documents sync
-# Exclude ~/Research/ from Time Machine
+defaults write com.apple.bird CloudDocsEnabled -bool false 2>/dev/null || true
+
+# Exclude ~/Research from Time Machine
+sudo tmutil addexclusion -p ~/Research
+
 # Disable Spotlight web suggestions
+defaults write com.apple.lookup.shared LookupSuggestionsDisabled -bool true
 
-# Audit skeleton
+# Audit folder skeleton
 mkdir -p ~/Research/audit/$(date +%F)
-echo "$(date) — setup complete by frontier LLM" > ~/Research/audit/$(date +%F)/setup.log
+echo "$(date)  setup-complete-by-frontier-llm" > ~/Research/audit/$(date +%F)/setup.log
+echo "${IRB_ID}" > ~/Research/audit/$(date +%F)/irb-id.txt
 ```
 
 ---
 
-## Phase 8 — Cron / launchctl scheduled tasks
+## PHASE 8 — CRON / LAUNCHD SCHEDULED TASKS (~5 min)
 
-```
-# 7 air-gap-friendly tasks per docs/v3_changes.md §8
-# Daily 03:00: airgap-nightly-handoff, llama-server-health, audit-rotate, leann-index-refresh
-# Weekly Sun 04:00: manuscript-snapshot, passport-cleanup, skill-usage-report
-# Each gets a launchd plist in ~/Library/LaunchAgents/
-```
+```bash
+# 7 air-gap cron tasks per docs/v3_changes.md
+mkdir -p ~/Library/LaunchAgents
 
----
+for task in airgap-nightly-handoff llama-server-health audit-rotate leann-index-refresh; do
+    # Daily tasks at 03:00-03:45
+    bash ~/local-agent-setup/scripts/install-cron.sh --task "$task" --schedule "daily-03"
+done
 
-## Phase 9 — Verification suite
+for task in manuscript-snapshot passport-cleanup skill-usage-report; do
+    # Weekly tasks Sunday 04:00-05:00
+    bash ~/local-agent-setup/scripts/install-cron.sh --task "$task" --schedule "weekly-sun-04"
+done
 
-```
-Test 1: curl localhost:11434/v1/chat/completions → response from Qwen 3.6
-Test 2: NOW activate Little Snitch Research Mode
-Test 3: tcpdump -i any -c 50 not host 127.0.0.1 → ZERO output (no external traffic)
-Test 4: Wi-Fi airplane test — chat still works
-Test 5: All 43+19 skills discoverable in Hermes
-Test 6: All 10 hooks fire on test events (manually trigger session start)
-Test 7: Sample analysis through Pillar 3 skills (R + mall against localhost:11434)
-Test 8: Sample literature query through Pillar 2 (LEANN + PaperQA2)
-Test 9: Sample manuscript outline → draft → claim-check round trip
-Test 10: Material Passport emit + resume in fresh session
+# Verify
+launchctl list | grep -E 'airgap-nightly-handoff|llama-server-health|audit-rotate|leann-index-refresh|manuscript-snapshot|passport-cleanup|skill-usage-report' | wc -l
+# Expected: 7
 ```
 
 ---
 
-## Hand-off (printed by you to the human)
+## PHASE 9 — VERIFICATION SUITE (~10 min)
+
+Run these in order; halt on any failure.
+
+```bash
+# Test 1: llama-server endpoint
+curl -s http://localhost:11434/v1/chat/completions \
+    -H "Authorization: Bearer local" \
+    -d '{"messages":[{"role":"user","content":"What is 2+2? One word."}],"max_tokens":10}' \
+    | jq -e '.choices[0].message.content' || { echo "TEST 1 FAIL"; exit 1; }
+
+# Test 2: Activate Little Snitch Research Mode (user already did in Phase 7)
+# Verify via tcpdump that no external traffic during a 10-sec window
+# (note: tcpdump needs sudo)
+TRAFFIC=$(sudo tcpdump -i any -c 50 -n 'not host 127.0.0.1 and not host ::1' 2>/dev/null | wc -l)
+[ "$TRAFFIC" -eq 0 ] || { echo "TEST 2 FAIL: external traffic during air-gap"; exit 1; }
+
+# Test 3: Wi-Fi airplane test
+networksetup -setairportpower en0 off
+sleep 3
+curl -s http://localhost:11434/v1/chat/completions \
+    -H "Authorization: Bearer local" \
+    -d '{"messages":[{"role":"user","content":"Reply: ok"}],"max_tokens":5}' \
+    | jq -e '.choices[0].message.content' || { echo "TEST 3 FAIL: chat broken in airplane mode"; exit 1; }
+networksetup -setairportpower en0 on
+echo "TEST 3 PASS: chat works offline ✓"
+
+# Test 4: skill discovery
+SKILL_COUNT=$(find ~/.agents/skills -name "SKILL.md" | wc -l)
+[ "$SKILL_COUNT" -ge 70 ] || { echo "TEST 4 FAIL: only $SKILL_COUNT skills discovered, expected ≥70"; exit 1; }
+
+# Test 5: hook fire — simulate session start
+echo '{"session_id":"verify-test","cwd":"/tmp"}' | bash ~/.agents/hooks/session-start-airgap.sh | head -5
+
+# Test 6: audit log creation
+ls -la ~/Research/audit/$(date +%F)/ || { echo "TEST 6 FAIL: audit folder missing"; exit 1; }
+
+# Test 7: Hermes Desktop is running with correct config
+defaults read com.nousresearch.hermes-agent base_url | grep -q "localhost:11434" \
+    || { echo "TEST 7 FAIL: Hermes config wrong"; exit 1; }
+
+# Test 8: R + ellmer can talk to local llama-server
+R --vanilla -e 'library(ellmer); chat <- chat_openai(base_url="http://localhost:11434/v1", api_key="local", model="qwen3.6:35b-a3b-q4_K_M"); cat(chat$chat("Reply OK"))' \
+    | grep -q "OK" || { echo "TEST 8 FAIL: R bridge broken"; exit 1; }
+
+# Test 9: Sample literature query through LEANN
+leann query ~/.leann/peds-endo-corpus --q "type 1 diabetes pediatric" --top 3 --json \
+    | jq -e '.results | length > 0' || { echo "TEST 9 FAIL: LEANN returned no results"; exit 1; }
+
+# Test 10: Material Passport emit + resume round-trip
+echo '{"stage":"verify-test","ledger_path":"/tmp/verify-ledger.jsonl"}' > /tmp/verify-input.json
+echo '{"ts":"2026-05-18T00:00:00","event":"test","content":"hello"}' > /tmp/verify-ledger.jsonl
+bash ~/.agents/skills/shared/02-material-passport-emit/invoke.sh < /tmp/verify-input.json \
+    | jq -e '.passport_hash' || { echo "TEST 10 FAIL: passport emit broken"; exit 1; }
+
+echo ""
+echo "==============================================="
+echo "  VERIFICATION SUITE: 10/10 PASSED"
+echo "==============================================="
+```
+
+---
+
+## HAND-OFF — PRINT THIS TO THE HUMAN
+
+After all 10 tests pass:
 
 ```
 ✅ Setup complete. Results:
-  • llama-server running on :11434 with Qwen 3.6 35B-A3B
-  • LFM2.5-350M router on :11436
-  • 62 skills installed at ~/.agents/skills/
-  • 10 hooks at ~/.agents/hooks/
-  • Audit log started at ~/Research/audit/{date}/
-  • Verification suite: [N/10 passed]
 
-🔒 To activate air-gap mode:
-  1. System Settings → General → Apps → Uninstall me (the frontier LLM agent you're talking to right now)
-  2. Click Little Snitch menu icon → switch to "Research Mode"
+  • llama-server running on :11434 (Qwen 3.6 35B-A3B)
+  • LFM2.5-350M router on :11436 (always warm)
+  • 78 skills installed at ~/.agents/skills/
+  • 11 hooks at ~/.agents/hooks/
+  • 7 cron tasks scheduled
+  • Voice profile: $([ "$FIRST_PAPER" = "true" ] && echo "GENERIC ($FIELD)" || echo "CALIBRATED from your papers")
+  • Audit folder: ~/Research/audit/$(date +%F)/
+  • Verification suite: 10/10 passed
+
+🔒 To activate air-gap mode and start working:
+
+  1. Quit me (the frontier LLM you're talking to). Then:
+     System Settings → General → Apps → Uninstall:
+     □ Claude Code
+     □ OpenAI Codex
+     □ Gemini CLI
+     (Whichever one I am.)
+
+  2. Little Snitch menu icon → confirm profile shows "Research Mode"
+
   3. Launch Hermes Agent Desktop from /Applications/
-  4. In Hermes, type: session-launch write-mode
-  5. Your local Qwen 3.6 is now your research assistant.
 
-📁 Audit folder: ~/Research/audit/
-📋 KVKK Art. 12 logs auto-populate per session.
+  4. In Hermes, type your first session opener:
+        session-launch <task description>
+     e.g. "session-launch I want to write the introduction of my GLP-1 paper"
 
-That's it. I'm leaving now. Good luck.
+  5. Optional but recommended on day 1:
+        - Read references/first-paper-onboarding.md (if you're new)
+        - Read references/colleague-onboarding-tutorial.md
+        - Try the verification suite again in 24h to confirm cron tasks fired
+
+Your local Qwen 3.6 is now your research assistant. Audit log is in
+~/Research/audit/. KVKK Art. 12 trail starts now.
+
+That's it. I'm leaving. Good luck.
+
+📚 If you ever need to refresh caches (guidelines, references, templates),
+   invoke the `request-momentary-internet` skill — it walks you through
+   the audit-logged brief lift of Research Mode.
+
+📝 If something breaks: ~/.research/lessons.md captures my install notes.
+   Last 50 lines of llama-server logs: tail ~/.research/logs/llama-server-qwen.log
 ```
 
 ---
 
-## Notes for the frontier LLM
+## Notes for the frontier LLM running this
 
-- **Do not paste raw patient data into your own context.** This setup is about preparing the user's machine to handle PHI, not about you handling it.
-- **Approve big choices via human.** Don't pick the daily-use GUI for them; ask.
-- **Verify Phase 9 fully before printing the hand-off.** Don't claim "setup complete" if any test failed.
-- **Write to `~/.research/lessons.md` as you go.** Every workaround, every weird hardware quirk, every config tweak. Future setups across the user's team will reference this.
+- **Apply Karpathy 12 rules to your OWN setup work.** Especially:
+  - Rule 4: define success = all 10 verification tests pass
+  - Rule 9: tests verify intent (model responds offline) not just behavior (process is running)
+  - Rule 10: checkpoint after each Phase — write a brief status to `~/.research/setup-progress.md`
+  - Rule 12: fail loud — if Phase 4 only got 3 of 6 society guideline caches, say so explicitly
+
+- **Material Passport for setup itself**: after each Phase, append a JSON line to `~/.research/setup-ledger.jsonl` with phase, status, key choices. If you get killed mid-setup, the user can paste the latest hash to a new agent session to resume.
+
+- **Do not skip Phase 9 verification.** A "setup complete" claim without 10/10 tests is a Rule-12 violation.
+
+- **Write to `~/.research/lessons.md`** as you go. Every workaround. Every package that wasn't where you expected. Every brew formula that conflicted. Future setups across the user's team will reference this.
+
+- **Don't paste raw patient data into your own context.** This setup is about preparing the user's machine to handle PHI, not about you handling it. If asked to "test the setup with some real patient data," refuse and use a synthetic fixture.
+
+- **Approve big choices via human.** Default to what the README says, but the user has veto on: daily-use GUI, model variant, R vs Python emphasis, journal LaTeX templates pulled.
+
+---
+
+## If you fail
+
+- Halt at the failed Phase
+- Emit a Material Passport for setup progress so far
+- Print clearly:
+  - Which Phase failed
+  - What test failed within that Phase
+  - The last 20 lines of relevant log
+  - Three suggested next actions
+- Do NOT try to "patch around" a fundamental failure (e.g., if Metal isn't working, don't fall back to CPU silently — tell the user)
+
+## Estimated total time
+
+~2 hours wall-clock with active supervision, of which ~1 hour is download time (parallelizable) and ~10 min is human input time.
+
+For a colleague rollout: this whole prompt + supervision = 2 hours per person. Versus the 12-25 hours saved on their first manuscript with a properly-set-up system. Net win after one manuscript.

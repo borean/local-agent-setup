@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.5.0] — 2026-05-18 — Setup prompt + lockfiles + field preset + Hermes-Raindrop bridge
+
+### Added — the pasteable SETUP_PROMPT
+
+`SETUP_PROMPT.md` expanded from outline to a real pasteable prompt (~16 KB). 9 phases:
+- Phase 0: preflight (direnv, mitmproxy, uv, pipx, inspect-ai, litellm, Raindrop Workshop)
+- Phase 1: inference (llama.cpp Metal, 3 GGUFs, 2 launchctl services)
+- Phase 2: skills + hooks + system prompts
+- Phase 3: Python venv (50+ packages) + R (~40 packages) + Quarto + TeX
+- Phase 4: caches + Zotero index
+- Phase 5: style-calibration one-shot (calibrate OR generic)
+- Phase 6: Hermes Agent Desktop install + config
+- Phase 7: air-gap configuration (Little Snitch + iCloud + Time Machine)
+- Phase 8: 7 cron tasks via launchctl
+- Phase 9: 10-test verification suite
+
+Plus full hand-off message + notes for the frontier LLM doing the install.
+
+### Added — lockfiles
+
+- `setup-prompts/medical-research-requirements.txt` — Python: ~50 packages curated for the air-gapped stack (pandas, numpy, scipy, statsmodels, pingouin, lifelines, pymc, paper-qa, leann, presidio, docling, ollama, pydantic-ai, opentelemetry exporters, inspect-ai)
+- `setup-prompts/medical-research-renv.R` — R: ~40 packages across tidy/stats/meta/power/viz/Bayes/LLM-bridge/reporting, installs via renv, generates renv.lock
+
+### Added — field preset
+
+- `system-prompts/field-presets/pediatric-endocrinology.md` — generic voice baseline loaded when first-paper users run `style-calibration --mode generic --field "pediatric endocrinology"`. Covers:
+  - Citation style (Vancouver, JCEM/JPEM/Diabetes Care conventions)
+  - Section structure (IMRaD per STROBE; case-report variant; review variant)
+  - Length limits per journal (JCEM, JPEM, Diabetes Care, Frontiers, Lancet D&E)
+  - Tense+voice conventions (1.3:1 active:passive default)
+  - Hedging vocabulary (strong/moderate/weak claim verbs; 4-6 hedges per 1000 words)
+  - Standard abbreviations (T1D, HbA1c, GHD, CAH, DSD, MODY, etc.)
+  - AI-tells to avoid ("delve", "underscore", "robust", "moreover")
+  - Statistics reporting (CI primary, p secondary; missing data; subgroups pre-specified)
+  - Pediatric-specific conventions (Tanner staging, bone age, BMI z-score, DXA volumetric correction)
+  - Ethics statement template (KVKK + Helsinki + assent ≥7yo)
+
+### Added — Hermes-Raindrop bridge
+
+- `references/hermes-raindrop-bridge.md` — verdict + bridge plan.
+  - **Native compat: NO** (Hermes uses openai==2.24.0 directly; Raindrop's auto-instrumentation hooks LLM client libs but misses Hermes's turn/tool/subagent structure)
+  - **Recommended bridge** (~30 min): `briancaffey/hermes-otel` plugin → Workshop's OTLP `/v1/traces` endpoint at `http://localhost:5899`
+  - Fallback (~50 LOC Python plugin) if OTLP rejects unauthenticated
+  - Worst-case (~1 day, NOT recommended): localhost HTTP MITM at :11434
+  - Two unverified assumptions called out (Workshop OTLP receiver accepting generic OTel; hermes-otel config syntax)
+
+### Decisions
+
+- **Voice baseline by field**: peds-endo first; oncology / IM / surgery presets stub-only for now (extend on demand)
+- **Bridge before native**: don't wait for upstream support; the hermes-otel path works today
+- **Phase 5 timing**: style-calibration is in-setup, not deferred to first session — gets a baseline written before user starts using Hermes
+
+### Open
+
+- Bridge test: run after Phase 6 (Hermes install); the verification suite Test 11 (manuscript-pipeline replay) should confirm
+- Oncology / IM / surgery field presets: not yet written
+- Generic field preset for non-Turkish locales (US peds endo style differs subtly from European)
+- `scripts/install-cron.sh`, `scripts/pin-cherry-picks.sh`, `scripts/download-guidelines.sh`, `scripts/download-references.sh` — referenced in SETUP_PROMPT but not yet written (frontier LLM will need to author or fall back to inline bash during setup)
+
+---
+
 ## [0.4.0] — 2026-05-18 — First-paper users + orchestrator
 
 ### Added
