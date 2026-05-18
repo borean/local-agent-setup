@@ -1,8 +1,8 @@
-# Bora's Notes — test-driven-development
+# Personal Notes — incremental-implementation
 
 ## Why we lifted this
 
-Strict TDD. Pairs with Bora's existing test-driven-development skill.
+Smallest-change-that-could-work. Counter to over-engineering.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

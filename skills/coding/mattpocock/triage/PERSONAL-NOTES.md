@@ -1,8 +1,8 @@
-# Bora's Notes — planning-and-task-breakdown
+# Personal Notes — triage
 
 ## Why we lifted this
 
-Task decomposition with dependency graph. Pairs with our analysis-plan skill.
+Task prioritization with cost/benefit. Use when you have 10 things to fix and 2 hours.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: mattpocock/skills/engineering. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

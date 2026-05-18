@@ -1,6 +1,6 @@
 ---
 name: shadcn
-description: Lifted verbatim from upstream. See BORA-NOTES.md for our adaptation notes.
+description: Lifted verbatim from upstream. See PERSONAL-NOTES.md for our adaptation notes.
 domain: coding
 sub-category: shadcn
 user-invocable: true
@@ -18,7 +18,7 @@ upstream:
 ⚠️ This skill is **cherry-picked from upstream**. The authoritative version lives at:
   https://github.com/shadcn-ui/ui/skills/shadcn/tree/main/skills/shadcn
 
-We pull the SKILL.md verbatim at the pinned commit (see frontmatter). Our adaptation notes are in `BORA-NOTES.md` alongside this file.
+We pull the SKILL.md verbatim at the pinned commit (see frontmatter). Our adaptation notes are in `PERSONAL-NOTES.md` alongside this file.
 
 ## Setup
 

@@ -1,8 +1,8 @@
-# Bora's Notes — idea-refine
+# Personal Notes — code-simplification
 
 ## Why we lifted this
 
-Hypothesis refinement loop. Maps to research question development.
+Pairs with zero-tech-debt. Different angle: simplify what exists vs rework from scratch.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

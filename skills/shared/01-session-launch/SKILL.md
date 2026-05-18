@@ -87,6 +87,6 @@ Skill output: {mode: code, model: qwen3.6:35b-a3b-q4_K_M, port: 11434,
 ## Credit
 
 Pattern derived from:
-- **qizhengz_alex's ACE framework** (Generator-Reflector-Curator) — surfaced in Bora's WhatsApp curation, May 2026
+- **qizhengz_alex's ACE framework** (Generator-Reflector-Curator) — surfaced in WhatsApp link-digest curation, May 2026
 - **LFM2.5-350M sidecar router idea** — @liquidai's tweet on the 350M tool-use model
 - **Session-locked orchestration** — emerged in v3_changes after Bora's "no mid-session model swap" rule

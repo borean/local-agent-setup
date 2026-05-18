@@ -1,8 +1,8 @@
-# Bora's Notes — react-best-practices
+# Personal Notes — web-design-guidelines
 
 ## Why we placed this in research/visualization (not coding/)
 
-Vercel's official React patterns. Useful for decks-bora UI work.
+Vercel's design rules. Complements our data-viz upgrade (OKLCH + Wong + Emil).
 
 ## How it complements our home-grown viz skills
 

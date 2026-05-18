@@ -1,8 +1,8 @@
-# Bora's Notes — code-simplification
+# Personal Notes — code-review-and-quality
 
 ## Why we lifted this
 
-Pairs with zero-tech-debt. Different angle: simplify what exists vs rework from scratch.
+Multi-pass code review with explicit rubric. Use for our own analysis scripts.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

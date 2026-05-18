@@ -1,8 +1,8 @@
-# Bora's Notes — zoom-out
+# Personal Notes — test-driven-development
 
 ## Why we lifted this
 
-When you're stuck in the weeds, force the global view. Often paired with material-passport-emit.
+Strict TDD. Pairs with Bora's existing test-driven-development skill.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: mattpocock/skills/engineering. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

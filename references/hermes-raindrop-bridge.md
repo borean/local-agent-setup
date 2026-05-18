@@ -58,7 +58,7 @@ plugins:
 ```bash
 raindrop workshop          # starts daemon on :5899
 # Or as launchctl:
-launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.raindrop-workshop.plist
+launchctl bootstrap gui/$(id -u) ~/.research/services/com.local-agent.raindrop-workshop.plist
 ```
 
 ### Step 4 — Smoke test

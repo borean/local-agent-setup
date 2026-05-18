@@ -10,12 +10,12 @@
 
 ## INITIAL CONTEXT (read me first)
 
-You are setting up a medical research workstation for a Turkish pediatric endocrinologist (or their colleague). Read these BEFORE touching the system:
+You are setting up a medical-research workstation for a clinical researcher (the human running you, or a colleague they're onboarding). Read these BEFORE touching the system:
 
 1. `$LOCAL_AGENT_SETUP/README.md` — overview
 2. `$LOCAL_AGENT_SETUP/docs/local_llm_plan.md` — architecture + compliance
 3. `$LOCAL_AGENT_SETUP/docs/v3_changes.md` — latest design decisions
-4. `$LOCAL_AGENT_SETUP/docs/harness_brief.md` — why Hermes Agent Desktop won
+4. `$LOCAL_AGENT_SETUP/docs/harness_brief.md` — why Hermes Agent won (historical doc; Desktop not shipping yet, TUI is daily)
 5. `$LOCAL_AGENT_SETUP/system-prompts/karpathy-12-rules.md` — apply these rules to your own work during setup
 6. `$LOCAL_AGENT_SETUP/references/compliance-primer.md` — KVKK/GDPR/HIPAA
 7. `$LOCAL_AGENT_SETUP/references/preflight-install-order.md` — the 5-step install order (you will execute it as Phase 0)
@@ -25,7 +25,7 @@ You are setting up a medical research workstation for a Turkish pediatric endocr
 After reading: you understand that **you (the frontier model) will be uninstalled after setup**. The human's daily-use stack will be:
 - `llama-server` (llama.cpp Metal) on `localhost:11434` serving Qwen 3.6 27B or 35B-A3B
 - `llama-server` on `localhost:11436` serving LFM2.5-350M (always-warm tool-call router)
-- Hermes Agent Desktop as the GUI
+- Hermes Agent (TUI today, Desktop later) as the harness
 - The ~74 SKILL.md files in `~/.agents/skills/`
 - 11 hooks in `~/.agents/hooks/`
 - 7 launchctl cron tasks
@@ -68,13 +68,26 @@ Run these exact questions back-to-back. Capture answers; do not ask again.
 6. Sudo password ready:
    You will need it for: brew, launchctl, Little Snitch profile install.
 
-7. Field for generic-mode style baseline (only if first-paper):
-   Options: "pediatric endocrinology" | "oncology" | "internal medicine" | "surgery" | other
+7. Clinical field / research domain (universal — drives field-preset generation,
+   style-calibration generic mode, and a handful of skill defaults):
+   Suggestions: "pediatric endocrinology" | "oncology" | "internal medicine" |
+   "surgery" | "cardiology" | "rheumatology" | other (free-text accepted).
+   Persisted as $FIELD to ~/.research/setup-env.
 
-8. Confirm Hermes Agent Desktop as the daily-use GUI.
-   This is the only supported harness in v0.x — see harness_brief.md.
-   If user has a hard preference for something else (Cline, Continue, etc.):
-   note it and flag as out-of-scope; they install separately after this setup.
+8. Primary clinical writing language:
+   en | tr | other (free-text accepted).
+   Drives optional Turkish-Gemma download in Phase 1 (lang=tr → download).
+   Persisted as $LANG_HINT.
+
+9. Install ceddcozum (33 pediatric clinical calculators)?
+   y/n. Recommended y only if field involves pediatrics. Skipped otherwise.
+   See Phase 5 — it's a public NPM, runs locally, no PHI exfil.
+   Persisted as $INSTALL_CEDDCOZUM.
+
+10. Confirm Hermes Agent (TUI today; Desktop arrives later) as the daily-use harness.
+    This is the only supported harness in v0.x — see harness_brief.md.
+    If user has a hard preference for something else (Cline, Continue, etc.):
+    note it and flag as out-of-scope; they install separately after this setup.
 ```
 
 After this block, commit each answer to `~/.research/setup-answers.yaml` for audit.
@@ -130,17 +143,78 @@ if [ -z "${LOCAL_AGENT_SETUP:-}" ]; then
     fi
 fi
 
-# Persist these to ~/.research/setup-env for downstream phases
+# 3. Existing-assets audit — don't re-download things the user already has
+# Power-user Macs often have Ollama, LM Studio, an existing Hermes config, an
+# existing ~/.agents/skills/ tree, a populated HF cache, etc. Catalog them so
+# Phases 1/2/5/7 can offer reuse instead of blind overwrite.
 mkdir -p ~/.research
+AUDIT=~/.research/setup-existing-assets.txt
+: > "$AUDIT"
+
+# Inference models — Ollama, LM Studio, HuggingFace cache
+if command -v ollama >/dev/null 2>&1; then
+    echo "OLLAMA_PRESENT=true" >> "$AUDIT"
+    ollama list 2>/dev/null | tail -n +2 | awk '{print "OLLAMA_MODEL=" $1}' >> "$AUDIT"
+fi
+if [ -d ~/.lmstudio/models ]; then
+    echo "LMSTUDIO_PRESENT=true" >> "$AUDIT"
+    find ~/.lmstudio/models -maxdepth 3 -name '*.gguf' 2>/dev/null \
+        | awk '{print "LMSTUDIO_MODEL=" $1}' >> "$AUDIT"
+fi
+if [ -d ~/.cache/huggingface/hub ]; then
+    echo "HF_CACHE_PRESENT=true" >> "$AUDIT"
+    find ~/.cache/huggingface/hub -maxdepth 2 -type d -name 'models--*' 2>/dev/null \
+        | sed 's|.*/models--||; s|--|/|g' | awk '{print "HF_MODEL=" $1}' >> "$AUDIT"
+fi
+
+# Harness — existing Hermes config (cloud or local)
+if [ -f ~/.hermes/config.yaml ]; then
+    echo "HERMES_CONFIG_EXISTS=true" >> "$AUDIT"
+    BASE=$(grep -E '^\s*base_url:' ~/.hermes/config.yaml 2>/dev/null | head -1 | awk '{print $2}')
+    [ -n "$BASE" ] && echo "HERMES_CURRENT_BASE_URL=$BASE" >> "$AUDIT"
+fi
+if command -v hermes >/dev/null 2>&1; then
+    echo "HERMES_BINARY_PRESENT=true" >> "$AUDIT"
+fi
+
+# Skill / hook layout
+if [ -d ~/.agents/skills ] && [ "$(find ~/.agents/skills -maxdepth 4 -name 'SKILL.md' 2>/dev/null | wc -l)" -gt 0 ]; then
+    COUNT=$(find ~/.agents/skills -maxdepth 4 -name 'SKILL.md' 2>/dev/null | wc -l | xargs)
+    echo "EXISTING_SKILLS_COUNT=$COUNT" >> "$AUDIT"
+fi
+if [ -d ~/.agents/hooks ] && [ "$(find ~/.agents/hooks -name '*.sh' 2>/dev/null | wc -l)" -gt 0 ]; then
+    HCOUNT=$(find ~/.agents/hooks -name '*.sh' 2>/dev/null | wc -l | xargs)
+    echo "EXISTING_HOOKS_COUNT=$HCOUNT" >> "$AUDIT"
+fi
+
+# Tooling — pipx, npm globals relevant to this stack
+if command -v pipx >/dev/null 2>&1; then
+    pipx list --short 2>/dev/null | awk '{print "PIPX_PKG=" $1}' >> "$AUDIT"
+fi
+if command -v npm >/dev/null 2>&1; then
+    npm ls -g --depth=0 --parseable 2>/dev/null | sed -n '2,$p' \
+        | awk -F'/node_modules/' '{print "NPM_GLOBAL=" $NF}' >> "$AUDIT"
+fi
+
+if [ -s "$AUDIT" ]; then
+    echo "ℹ️ Existing assets catalogued at $AUDIT"
+    echo "   Downstream phases will offer reuse/skip/overwrite per asset."
+    echo "   Inspect: cat $AUDIT"
+else
+    echo "✓ Greenfield machine — no conflicting assets detected."
+fi
+
+# Persist these to ~/.research/setup-env for downstream phases
 cat > ~/.research/setup-env <<EOF
 export LOCAL_AGENT_SETUP=$LOCAL_AGENT_SETUP
 export LLAMA_PORT=$LLAMA_PORT
 export LFM_PORT=$LFM_PORT
+export EXISTING_ASSETS=$AUDIT
 EOF
 echo "✓ Setup env saved to ~/.research/setup-env"
 ```
 
-After the pre-check: all later phases use `$LOCAL_AGENT_SETUP`, `$LLAMA_PORT`, and `$LFM_PORT` instead of hardcoded `~/local-agent-setup` / `11434` / `11436`. Source `~/.research/setup-env` if running phases in a new shell.
+After the pre-check: all later phases use `$LOCAL_AGENT_SETUP`, `$LLAMA_PORT`, `$LFM_PORT`, and `$EXISTING_ASSETS` instead of hardcoded paths. Source `~/.research/setup-env` if running phases in a new shell. The agent should `cat $EXISTING_ASSETS` and decide per asset whether to reuse, skip, or overwrite — never blindly redownload a model or stomp a config the user already has.
 
 ---
 
@@ -214,7 +288,7 @@ ollama pull qwen3.6:35b-a3b
 ```
 If you choose Ollama, **skip the launchctl plist work in this Phase** — Ollama manages its own daemon. The Phase 0 PRE-CHECK detects an existing Ollama on :11434 and offers to accept it as the inference backend. Trade-off: Ollama abstracts the underlying llama.cpp; we lose direct control over `--mlock`, `--ctx-size`, etc. (you set these via Ollama's `Modelfile`).
 
-For Bora's setup we use llama-server/mlx_lm.server direct because we've designed around explicit flags. For colleagues who want the simplest path, **Ollama is fine** and the downstream skills don't notice the difference.
+**Default path** is llama-server / mlx_lm.server direct because the rest of the stack assumes explicit flags (`--mlock`, `--ctx-size`, `--jinja`, etc.). **Ollama is a fine alternative** for users who want the simpler one-line install — downstream skills don't notice the difference.
 
 ```bash
 # Detect device
@@ -233,8 +307,68 @@ fi
 
 mkdir -p ~/.research/{models,logs,services}
 
+# Existing-model reuse — before downloading 35-64 GB of weights, see what the
+# user already has. Source the audit from PRE-CHECK.
+[ -f ~/.research/setup-env ] && source ~/.research/setup-env
+if [ -f "${EXISTING_ASSETS:-}" ]; then
+    HAS_QWEN_35B=$(grep -E 'qwen.*3.6.*35b|Qwen3\.6-35B-A3B' "$EXISTING_ASSETS" -i | head -1)
+    HAS_QWEN_27B=$(grep -E 'qwen.*3.6.*27b|Qwen3\.6-27B' "$EXISTING_ASSETS" -i | head -1)
+    HAS_LFM=$(grep -E 'LFM2\.5-350M' "$EXISTING_ASSETS" -i | head -1)
+    if [ -n "$HAS_QWEN_35B" ] || [ -n "$HAS_QWEN_27B" ] || [ -n "$HAS_LFM" ]; then
+        echo "ℹ️ Existing Qwen/LFM weights detected:"
+        [ -n "$HAS_QWEN_35B" ] && echo "   • $HAS_QWEN_35B"
+        [ -n "$HAS_QWEN_27B" ] && echo "   • $HAS_QWEN_27B"
+        [ -n "$HAS_LFM" ]      && echo "   • $HAS_LFM"
+        echo ""
+        echo "Options:"
+        echo "  (r) Reuse — symlink the existing weights into ~/.research/models/"
+        echo "      and skip the huggingface-cli download for those models."
+        echo "  (d) Download fresh — pin a specific revision regardless of what's on disk."
+        echo "      Uses ~20 GB extra disk but guarantees the exact build we tested against."
+        echo "  (s) Skip Phase 1 model downloads entirely — manual setup (advanced)."
+        read -p "Choice [r/d/s]: " MODEL_CHOICE
+        case "$MODEL_CHOICE" in
+            r) REUSE_EXISTING_MODELS=true ;;
+            s) SKIP_MODEL_DOWNLOAD=true ;;
+            *) REUSE_EXISTING_MODELS=false ;;
+        esac
+    fi
+fi
+
+# If reusing, locate and symlink. Skip if (d) or no existing weights.
+if [ "${REUSE_EXISTING_MODELS:-false}" = "true" ]; then
+    # Ollama models live as blob refs under ~/.ollama/models/blobs/. Easier:
+    # use `ollama show <model> --modelfile` to get the FROM line, OR direct-load
+    # via OLLAMA_HOST. For now we point llama-server at the Ollama-served port
+    # if the user picked option (c) in port-check; otherwise we symlink known GGUFs.
+    for src in ~/.lmstudio/models ~/.cache/huggingface/hub; do
+        [ -d "$src" ] || continue
+        # Find Qwen 3.6 35B-A3B GGUF / MLX
+        find "$src" -type f \( -name '*Qwen3.6-35B-A3B*.gguf' -o -name '*Qwen3.6-35B-A3B*MLX*' \) 2>/dev/null \
+            | head -1 | while read -r model_path; do
+                [ -n "$model_path" ] && ln -sf "$model_path" ~/.research/models/ && \
+                    echo "✓ Symlinked $model_path"
+            done
+        find "$src" -type f \( -name '*Qwen3.6-27B*.gguf' -o -name '*Qwen3.6-27B*MLX*' \) 2>/dev/null \
+            | head -1 | while read -r model_path; do
+                [ -n "$model_path" ] && ln -sf "$model_path" ~/.research/models/ && \
+                    echo "✓ Symlinked $model_path"
+            done
+        find "$src" -type f -name '*LFM2.5-350M*Q8_0.gguf' 2>/dev/null \
+            | head -1 | while read -r model_path; do
+                [ -n "$model_path" ] && ln -sf "$model_path" ~/.research/models/ && \
+                    echo "✓ Symlinked $model_path"
+            done
+    done
+    # If symlinks now cover all three, skip downloads. Otherwise fall through to
+    # download whatever is missing. The huggingface-cli below is idempotent —
+    # it no-ops on already-cached revisions.
+fi
+
 # Install runtime
-if [ "$INFERENCE_FORMAT" = "mlx" ]; then
+if [ "${SKIP_MODEL_DOWNLOAD:-false}" = "true" ]; then
+    echo "⏭ Skipping Phase 1 downloads per user choice."
+elif [ "$INFERENCE_FORMAT" = "mlx" ]; then
     pipx install mlx-lm
     pipx install mlx-vlm   # for vision support (Qwen 3.6 35B-A3B has vision)
 
@@ -272,7 +406,8 @@ else
 fi
 
 # Optional Turkish model — always GGUF (LFM2.5 + Turkish-Gemma not yet in MLX format as of May 2026)
-if [ "$FIELD" = "pediatric endocrinology" ]; then
+# Triggered by language preference, not field, so non-medical Turkish writers also benefit.
+if [ "${LANG_HINT:-en}" = "tr" ]; then
     huggingface-cli download \
         ytu-ce-cosmos/Turkish-Gemma-9b-T1-GGUF \
         Turkish-Gemma-9b-T1-Q4_K_M.gguf \
@@ -355,12 +490,12 @@ else
     <string>--api-key</string><string>local</string>"
 fi
 
-cat > ~/.research/services/com.bora.llama-server.qwen.plist <<PLIST
+cat > ~/.research/services/com.local-agent.llama-server.qwen.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.bora.llama-server.qwen</string>
+  <key>Label</key><string>com.local-agent.llama-server.qwen</string>
   <key>ProgramArguments</key>
   <array>$QWEN_PROGRAM_ARGS
   </array>
@@ -374,12 +509,12 @@ PLIST
 
 # Service B: LFM2.5-350M tool-call router on $LFM_PORT (always GGUF; no MLX variant yet)
 LLAMA_SERVER_BIN=$(which llama-server || echo "/opt/homebrew/bin/llama-server")
-cat > ~/.research/services/com.bora.lfm-router.plist <<PLIST
+cat > ~/.research/services/com.local-agent.lfm-router.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.bora.lfm-router</string>
+  <key>Label</key><string>com.local-agent.lfm-router</string>
   <key>ProgramArguments</key>
   <array>
     <string>$LLAMA_SERVER_BIN</string>
@@ -399,8 +534,8 @@ cat > ~/.research/services/com.bora.lfm-router.plist <<PLIST
 PLIST
 
 # Load both
-launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.llama-server.qwen.plist
-launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.lfm-router.plist
+launchctl bootstrap gui/$(id -u) ~/.research/services/com.local-agent.llama-server.qwen.plist
+launchctl bootstrap gui/$(id -u) ~/.research/services/com.local-agent.lfm-router.plist
 
 # Wait for services to warm up
 sleep 15
@@ -424,7 +559,31 @@ If both services respond: Phase 1 complete.
 ## PHASE 2 — SKILLS + HOOKS + SYSTEM PROMPTS (~5 min)
 
 ```bash
-mkdir -p ~/.agents/{skills,hooks,system-prompts,state,bin,tools}
+[ -f ~/.research/setup-env ] && source ~/.research/setup-env
+
+# Existing-skills reuse — if the user already has a ~/.agents/skills/ tree
+# (130+ skills is typical for a power-user coding-agent setup), don't stomp it.
+# Three layout options:
+SKILLS_TARGET=~/.agents/skills
+if [ -f "${EXISTING_ASSETS:-}" ] && grep -q '^EXISTING_SKILLS_COUNT=' "$EXISTING_ASSETS" 2>/dev/null; then
+    COUNT=$(grep '^EXISTING_SKILLS_COUNT=' "$EXISTING_ASSETS" | head -1 | cut -d= -f2)
+    echo "ℹ️ Existing skill library detected: $COUNT SKILL.md files in ~/.agents/skills/"
+    echo "Options:"
+    echo "  (m) Merge — copy local-agent-setup skills into ~/.agents/skills/ alongside existing."
+    echo "      Path collisions are skipped (existing wins). Hermes sees one combined tree."
+    echo "  (n) Namespace — install to ~/.agents/skills-local-agent/ instead."
+    echo "      Keeps the two libraries fully separate. Hermes config gets both paths."
+    echo "  (o) Overwrite — replace ~/.agents/skills/ contents with this bundle."
+    echo "      Destructive — only choose if you intentionally want one source of truth."
+    read -p "Choice [m/n/o]: " SKILL_CHOICE
+    case "$SKILL_CHOICE" in
+        n) SKILLS_TARGET=~/.agents/skills-local-agent ;;
+        o) rm -rf ~/.agents/skills && mkdir -p ~/.agents/skills ;;
+        *) : ;;  # merge is default; cp -r below will skip nothing, so collisions DO clobber
+                 # — to honor "existing wins", switch to: cp -Rn (no-clobber)
+    esac
+fi
+mkdir -p "$SKILLS_TARGET" ~/.agents/{hooks,system-prompts,state,bin,tools}
 
 # Install dispatcher scripts (used by cron tasks + verification tests)
 cp $LOCAL_AGENT_SETUP/bin/*.sh ~/.agents/bin/
@@ -435,7 +594,7 @@ cp $LOCAL_AGENT_SETUP/system-prompts/karpathy-12-rules.md ~/.agents/system-promp
 cat > ~/.agents/system-prompts/air-gap-preamble.md <<'PROMPT'
 ## Air-gap mode preamble
 
-You are running on a Turkish pediatric endocrinologist's local Qwen 3.6 model.
+You are running on the user's local Qwen 3.6 model.
 This machine is currently air-gapped (Little Snitch Research Mode).
 
 Rules in addition to Karpathy 12:
@@ -451,10 +610,13 @@ Rules in addition to Karpathy 12:
 5. When in doubt about whether to act, emit a Material Passport and ask.
 PROMPT
 
-# Skills — copy entire bundle
-cp -r $LOCAL_AGENT_SETUP/skills/* ~/.agents/skills/
+# Skills — copy entire bundle into the selected target (merge / namespace / overwrite)
+# `cp -Rn` is no-clobber: a colliding skill from the existing tree wins. Use plain `cp -r`
+# if you picked overwrite above (the `rm -rf` already cleared the target).
+cp -Rn $LOCAL_AGENT_SETUP/skills/* "$SKILLS_TARGET"/ 2>/dev/null || \
+    cp -r $LOCAL_AGENT_SETUP/skills/* "$SKILLS_TARGET"/
 
-# Hooks — copy and ensure executable
+# Hooks — copy and ensure executable (no merge logic; air-gap hooks are stack-specific)
 cp $LOCAL_AGENT_SETUP/hooks/*.sh ~/.agents/hooks/
 chmod +x ~/.agents/hooks/*.sh
 
@@ -628,15 +790,36 @@ If the user's field isn't in the case statement above, prompt: "What 3-5 journal
 
 ---
 
-## PHASE 5 — CEDDCOZUM TOOL INTEGRATION (~5 min)
+## PHASE 5 — OPTIONAL DOMAIN-TOOL INTEGRATION (~5 min)
 
-Bora's `ceddcozum` NPM package (v0.2.2) exposes **33 pediatric clinical calculators as a CLI** with OpenAI-compatible tool schemas. It's already designed for LLM agent use — see `ceddcozum --help` output (`--schemas`, `--args '{"...":"..."}'`).
+**Skip this phase entirely** unless your field involves pediatrics (see PRE-FLIGHT Q9: `$INSTALL_CEDDCOZUM`). For non-pediatric fields, this phase is a no-op — the rest of the stack works without it.
 
-We integrate it as a **tool palette** for the local Qwen, not as a static data export. Every one of its 33 calculators becomes callable by the agent during a session.
+### The pattern, generalized
+
+Phase 5 wires a **field-specific calculator CLI** into the agent's tool palette via the `--schemas` JSON-dump pattern. The example below uses `ceddcozum` (33 pediatric clinical calculators, public NPM package by [borean](https://github.com/borean)) because it's the seed user's tool of choice. The pattern works for any CLI that exposes machine-readable schemas:
+
+- Pediatric endo: `ceddcozum` (auxology, IGF SDS, BMD, HbA1c, BP percentiles, ...)
+- Oncology: your-own-tool with TNM staging, dose-by-BSA calculators, RECIST workflows
+- Cardiology: framingham/ASCVD/CHA₂DS₂-VASc calculators
+- Internal medicine: APACHE/SOFA/qSOFA/CURB-65/Glasgow scores
+
+If you don't have such a CLI for your field, **skip Phase 5**. If you do, follow the recipe below substituting your tool name and schema path.
+
+### Example: ceddcozum (skip if `$INSTALL_CEDDCOZUM != y`)
 
 ```bash
-# Install globally (works on Mac via Homebrew Node; on other systems via nvm)
-npm install -g ceddcozum
+[ -f ~/.research/setup-env ] && source ~/.research/setup-env
+if [ "${INSTALL_CEDDCOZUM:-n}" != "y" ]; then
+    echo "⏭ Phase 5 skipped — INSTALL_CEDDCOZUM=n (non-pediatric field)."
+    return 0 2>/dev/null || exit 0
+fi
+
+# Reuse if already installed globally
+if command -v ceddcozum >/dev/null 2>&1; then
+    echo "✓ ceddcozum already installed: $(ceddcozum --version)"
+else
+    npm install -g ceddcozum
+fi
 
 # Verify
 ceddcozum --version  # should print "0.2.2" or later
@@ -650,12 +833,13 @@ echo "✓ Dumped $(jq 'length' ~/.agents/tools/ceddcozum-schemas.json) tool sche
 # Quick sanity test — invoke a calculator with JSON args
 ceddcozum auxology --args '{"sex":"male","age":5.5,"height":110,"weight":19}' --format json | jq .
 
-# Install the wrapper that Hermes Agent will use to dispatch calls
-# (This skill becomes available immediately; details in skills/coding/bora/ceddcozum-tools/SKILL.md)
-cp -r $LOCAL_AGENT_SETUP/skills/coding/bora/ceddcozum-tools ~/.agents/skills/coding/bora/
+# Install the wrapper that the agent will use to dispatch calls
+# (This skill is part of the personal/ folder by default; details in skills/coding/personal/ceddcozum-tools/SKILL.md)
+mkdir -p ~/.agents/skills/coding/personal
+cp -r $LOCAL_AGENT_SETUP/skills/coding/personal/ceddcozum-tools ~/.agents/skills/coding/personal/
 ```
 
-What the agent can do after this phase:
+What the agent gains after this phase (pediatric example):
 
 - Compute SDS / percentiles for height, weight, BMI, head circumference (Neyzi, WHO, CDC, IAP references)
 - Compute IGF-1 SDS by age + sex
@@ -667,6 +851,15 @@ What the agent can do after this phase:
 - ...all 33 tools from `ceddcozum --list`
 
 Every call runs **locally**. No network. No PHI leaves the laptop. The agent dispatches via the wrapper skill, which validates inputs against the schema before invoking the CLI.
+
+### Adapting Phase 5 to your own CLI
+
+If you have a field-specific calculator CLI (or you build one):
+
+1. Make sure it accepts `--schemas` and emits JSON-Schema for each callable
+2. Make sure each callable accepts `--args '{...}' --format json`
+3. Copy `skills/coding/personal/ceddcozum-tools/SKILL.md` as a template, swap the tool name and the schemas path
+4. Repeat the dump/wrapper-install steps above with your tool's name
 
 ---
 
@@ -705,23 +898,50 @@ cat ~/.agents/system-prompts/${USERNAME}-voice.md | head -20
 So we install the TUI today and bookmark Desktop for later.
 
 ```bash
-# Install via pipx (isolated env; recommended over pip into system Python)
-pipx install hermes-agent
-pipx ensurepath
+[ -f ~/.research/setup-env ] && source ~/.research/setup-env
+
+# Existing Hermes? Don't blindly stomp the user's config.
+if [ -f ~/.hermes/config.yaml ]; then
+    EXISTING_BASE=$(grep -E '^\s*base_url:' ~/.hermes/config.yaml | head -1 | awk '{print $2}')
+    echo "ℹ️ Existing ~/.hermes/config.yaml found. Current provider base_url: ${EXISTING_BASE:-<not parseable>}"
+    echo "Options:"
+    echo "  (b) Back up the existing config to ~/.hermes/config.yaml.pre-local-agent and write a fresh local-only one."
+    echo "  (s) Skip — keep existing config. (Skills/hooks paths must be updated manually to point at this bundle.)"
+    echo "  (o) Overwrite without backup."
+    read -p "Choice [b/s/o]: " HERMES_CHOICE
+    case "$HERMES_CHOICE" in
+        s) HERMES_WRITE_CONFIG=false ;;
+        o) HERMES_WRITE_CONFIG=true ;;
+        *) cp ~/.hermes/config.yaml ~/.hermes/config.yaml.pre-local-agent
+           echo "✓ Backed up to ~/.hermes/config.yaml.pre-local-agent"
+           HERMES_WRITE_CONFIG=true ;;
+    esac
+else
+    HERMES_WRITE_CONFIG=true
+fi
+
+# Install via pipx (isolated env; recommended over pip into system Python).
+# If hermes is already on PATH, reuse it.
+if ! command -v hermes >/dev/null 2>&1; then
+    pipx install hermes-agent
+    pipx ensurepath
+fi
 
 # Verify
 hermes --version
 
 # Configure via ~/.hermes/config.yaml (the standard Hermes config path)
 mkdir -p ~/.hermes
-cat > ~/.hermes/config.yaml <<EOF
+if [ "${HERMES_WRITE_CONFIG:-true}" = "true" ]; then
+    SKILLS_PATH=${SKILLS_TARGET:-$HOME/.agents/skills}
+    cat > ~/.hermes/config.yaml <<EOF
 provider:
   type: openai-compatible
   base_url: http://localhost:${LLAMA_PORT:-11434}/v1
   api_key: local
   default_model: qwen3.6-35b-a3b
 
-skills_path: $HOME/.agents/skills
+skills_path: $SKILLS_PATH
 hooks_path: $HOME/.agents/hooks
 system_prompts_path: $HOME/.agents/system-prompts
 
@@ -732,6 +952,7 @@ raindrop:
   local_debugger: http://localhost:5899
   via_plugin: hermes-otel    # per references/hermes-raindrop-bridge.md
 EOF
+fi
 
 # Optional: install the hermes-otel plugin for Raindrop tracing
 hermes plugins install briancaffey/hermes-otel || \
@@ -925,7 +1146,8 @@ After all 10 tests pass:
 
   2. Little Snitch menu icon → confirm profile shows "Research Mode"
 
-  3. Launch Hermes Agent Desktop from /Applications/
+  3. Launch Hermes Agent: double-click `~/Desktop/Hermes.command` (or run `hermes` in Terminal).
+     Note: Hermes ships as a TUI today; native Desktop app is a later release.
 
   4. In Hermes, type your first session opener:
         session-launch <task description>

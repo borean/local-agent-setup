@@ -27,9 +27,9 @@ A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM
 - **Inference**: `llama-server` (llama.cpp Metal build) on `localhost:11434`
 - **Models**: Qwen 3.6 27B dense (writing/reasoning) + Qwen 3.6 35B-A3B MoE (coding/agentic), one at a time
 - **Sidecar router**: LFM2.5-350M (always warm, ~500 MB, classifies tasks → picks model)
-- **Daily-use GUI**: **Hermes Agent Desktop**
-- **Skills**: 43-skill medical-research bundle in `SKILL.md` format (Anthropic open standard)
-- **Hooks**: 10 event-driven scripts (session-start, session-end, pre-compact, etc.)
+- **Daily-use harness**: **Hermes Agent** (TUI today via `pipx install hermes-agent`; Desktop arrives later)
+- **Skills**: 74 SKILL.md files in `SKILL.md` format (Anthropic open standard) — three bundles: shared / research / coding
+- **Hooks**: 11 event-driven scripts (session-start, session-end, pre-compact, etc.)
 - **Cron**: 7 local-only scheduled tasks (audit-rotate, llama-server-health, leann-index-refresh, etc.)
 - **Compliance**: Little Snitch "Research Mode" + Material Passport audit trail
 - **Frontier LLM does the setup**, then gets uninstalled. Internet cut. User works air-gapped.
@@ -38,7 +38,7 @@ A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM
 
 ## Who this is for
 
-1. **Clinician researchers** — Bora is a Turkish pediatric endocrinologist; this is built for his workflow but generalizes to any clinical research domain (oncology, cardiology, rheumatology, etc.)
+1. **Clinician researchers** — Built around a clinical-research workflow (peds endocrinology was the seed, but the design generalizes to oncology, cardiology, rheumatology, internal medicine, etc.)
 2. **Their colleagues** — non-technical clinicians who need the same setup but have a frontier LLM to do the work for them
 3. **Research labs** — IRB-approved, KVKK/GDPR-compliant research on identifiable patient data without sending it to anyone's cloud
 
@@ -61,7 +61,7 @@ A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM
 4. When the AI gets to the hand-off step:
    - Close the browser AI tab
    - Flip Little Snitch → "Research Mode"
-   - Launch Hermes Agent Desktop
+   - Launch Hermes Agent (double-click `~/Desktop/Hermes.command` — opens the TUI)
 
 **Expected total time**: ~2 hours, mostly waiting for model downloads.
 **What you need**: a Mac (Apple Silicon strongly preferred), a free ChatGPT or Claude account, ~50 GB free disk space, ~2 hours of attention.
@@ -81,9 +81,9 @@ cd ~/local-agent-setup
 
 The CLI path is ~30% faster (the agent runs commands directly) but requires you to already have a coding-agent CLI. Both paths produce the same end state.
 
-### Day 2+ — Daily use (no terminal needed)
+### Day 2+ — Daily use
 
-- Open Hermes Agent Desktop → chat box
+- Double-click `~/Desktop/Hermes.command` (or run `hermes` in Terminal)
 - Type a session opener: `session-launch write-mode` or `session-launch code-mode`
 - Work
 - Hit the natural context limit → Hermes emits a Material Passport hash → you paste it into next session to resume
@@ -112,7 +112,7 @@ local-agent-setup/
 ├── system-prompts/        ← system prompts the local model loads
 │   ├── karpathy-12-rules.md     ← Karpathy's 12 rules (mistake rate 41% → 3%)
 │   ├── air-gap-preamble.md
-│   └── bora-voice.md.example
+│   └── voice.md.example
 │
 ├── references/            ← reusable patterns + tutorials
 │   ├── preflight-install-order.md      ← direnv/litellm/uv/mitmproxy/inspect-ai
@@ -137,7 +137,7 @@ local-agent-setup/
 │       ├── mattpocock/    ← 4 from mattpocock/skills/engineering
 │       ├── vercel/        ← 1 from vercel-labs/agent-skills
 │       ├── shadcn/        ← shadcn CLI v4
-│       └── bora/          ← zero-tech-debt + custom additions
+│       └── personal/      ← zero-tech-debt + clawpatch-wrapper + ceddcozum-tools
 │
 ├── hooks/                 ← event-driven shell scripts
 │   ├── session-start-airgap.sh
@@ -177,20 +177,23 @@ The Turkish DPA Agentic AI guidance (April 15 2026) is explicit: there is no "on
 
 ---
 
-## Status
+## Status (as of v0.9.5)
 
-- [x] Architecture spec (PLAN.md)
-- [x] Skill set design (skillset_v1.md + v2_additions.md)
-- [x] Harness pick (Hermes Agent Desktop)
+- [x] Architecture spec ([docs/local_llm_plan.md](docs/local_llm_plan.md))
+- [x] Skill set design ([docs/skillset_v1.md](docs/skillset_v1.md) + [docs/skillset_v2_additions.md](docs/skillset_v2_additions.md))
+- [x] Harness pick (Hermes Agent — TUI today, Desktop later; see [docs/harness_brief.md](docs/harness_brief.md))
 - [x] Karpathy 12-rule system prompt
-- [x] 5-step preflight install order
+- [x] 5-step preflight install order ([references/preflight-install-order.md](references/preflight-install-order.md))
 - [x] Skill library cherry-picks (addyosmani/mattpocock/vercel/shadcn)
-- [ ] Skill `.md` files (43 of 43 to write)
-- [ ] Hook `.sh` files (10 of 10 to write)
-- [ ] Cron task SKILL.md files (7 of 7 to write)
-- [ ] Setup prompt (final pasteable version)
-- [ ] Verification suite (test 1-7)
-- [ ] Public release
+- [x] Skill `.md` files (74 SKILL.md across shared/research/coding bundles)
+- [x] Hook `.sh` files (11 of 11 written)
+- [x] Cron task SKILL.md files (7 of 7 written; 4 daily + 3 weekly)
+- [x] Setup prompt ([SETUP_PROMPT.md](SETUP_PROMPT.md) — 11 phases, pasteable)
+- [x] Verification suite (10 tests in Phase 10)
+- [x] Existing-assets audit + reuse branches (v0.9.5)
+- [ ] Real-machine install validation (Phase A spine smoke test recommended first — see [references/phase-a-smoke-test.md](references/phase-a-smoke-test.md))
+- [ ] Linux/Windows full setup walk-throughs (cross-platform notes exist; full walk-throughs deferred)
+- [ ] Public release (post real-install validation)
 
 ---
 

@@ -130,7 +130,7 @@ For a no-WSL native path: install Ollama (it's native Windows + has GGUF support
 
 For now: **use Mac if you can**. The stack is most tested there. Linux works fine if you're comfortable adapting; Windows works via WSL2 with the same comfort level.
 
-The repo's primary use case (Bora + Turkish pediatric endo colleagues) is overwhelmingly Mac. If a non-Mac user needs the stack, the bridge work above is the path; PRs welcome.
+The repo's primary use case (the author's workflow + Turkish-speaking peds endo colleagues) is overwhelmingly Mac. If a non-Mac user needs the stack, the bridge work above is the path; PRs welcome.
 
 ---
 

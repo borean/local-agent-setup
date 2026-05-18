@@ -1,8 +1,8 @@
-# Bora's Notes — shadcn
+# Personal Notes — doubt-driven-development
 
 ## Why we lifted this
 
-The official shadcn CLI v4 skill. Useful for decks-bora UI components.
+Alternative to TDD: state what you DON'T know first. Maps to research methodology.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: shadcn-ui/ui/skills/shadcn. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

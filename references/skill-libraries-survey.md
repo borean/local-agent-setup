@@ -36,7 +36,7 @@ debugging-and-error-recovery    ✅ PULL → skills/coding/
 deprecation-and-migration       ❌ skip
 documentation-and-adrs          ✅ PULL → skills/meta/
 doubt-driven-development        ✅ PULL → skills/coding/ (interesting alt to TDD)
-frontend-ui-engineering         ❌ skip — Bora has his own data-viz skill
+frontend-ui-engineering         ❌ skip — the user has their own data-viz skill
 git-workflow-and-versioning     ❌ skip — colleagues don't use git
 idea-refine                     ✅ PULL → skills/meta/ (hypothesis refinement)
 incremental-implementation      ✅ PULL → skills/coding/
@@ -77,11 +77,11 @@ zoom-out                          ✅ PULL → skills/meta/ — when you're stuc
 ```
 composition-patterns              ✅ PULL → skills/coding/ — generic React composition
 deploy-to-vercel                  ❌ skip — air-gap
-react-best-practices              ✅ PULL → skills/coding/ — Bora vibes React
+react-best-practices              ✅ PULL → skills/coding/ — relevant for any React-using clinician
 react-native-skills               ❌ skip — no mobile
-react-view-transitions            ✅ PULL → skills/visualization/ — for decks-bora animations
+react-view-transitions            ✅ PULL → skills/visualization/ — for any web-deck animations
 vercel-cli-with-tokens            ❌ skip — air-gap
-web-design-guidelines             ✅ PULL → skills/visualization/ — Vercel design rules, pairs with Bora's data-viz upgrade
+web-design-guidelines             ✅ PULL → skills/visualization/ — Vercel design rules, pairs with the data-viz upgrade
 ```
 
 **4 pulls**: composition-patterns, react-best-practices, react-view-transitions, web-design-guidelines.
@@ -89,7 +89,7 @@ web-design-guidelines             ✅ PULL → skills/visualization/ — Vercel 
 ### From shadcn-ui/ui/skills/shadcn — pull 1
 
 ```
-shadcn (the CLI v4 skill)         ✅ PULL → skills/coding/ — useful for decks-bora UI components
+shadcn (the CLI v4 skill)         ✅ PULL → skills/coding/ — useful for any web-deck UI components
 ```
 
 ### From Imbad0202/academic-research-skills — already absorbed into skillset_v2_additions
@@ -102,7 +102,7 @@ nature-figure → Skill #30 (already in v2 viz)
 
 ### From Anthropic skills (official) — selectively
 
-We already use the format spec. Their actual reference skills (`pdf`, `docx`, `xlsx`, `pptx`, `skill-creator`, `setup-cowork`, `consolidate-memory`) — Bora already has these via the anthropic-skills marketplace plugin. We do NOT duplicate; we let his existing installation cover them, just confirm they're symlinked or copied into the air-gap `~/.agents/skills/` path.
+We already use the format spec. Their actual reference skills (`pdf`, `docx`, `xlsx`, `pptx`, `skill-creator`, `setup-cowork`, `consolidate-memory`) — If the user already has these via the anthropic-skills marketplace plugin, we do NOT duplicate — confirm they're symlinked or copied into the air-gap `~/.agents/skills/` path.
 
 ---
 
@@ -139,11 +139,11 @@ skills/visualization/
   web-design-guidelines/      (from vercel)
 ```
 
-These are pulled VERBATIM from upstream, then a `BORA-NOTES.md` per-skill file is added with our adaptation notes (medical-research framing, air-gap constraints, model-routing 27B-vs-35B-A3B preferences).
+These are pulled VERBATIM from upstream, then a `PERSONAL-NOTES.md` per-skill file is added with our adaptation notes (medical-research framing, air-gap constraints, model-routing 27B-vs-35B-A3B preferences).
 
 Grand total skill bundle: **43 core (v1+v2) + 19 cherry-picks = 62 skills.**
 
-That's still fewer than Bora's existing 130 — the bundle is curated for one purpose, not general-coding.
+That's fewer than a typical generalist coding-agent setup (~100+ skills) — this bundle is curated for one purpose, not general-coding.
 
 ---
 

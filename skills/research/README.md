@@ -71,7 +71,7 @@ research/
 
 - **Two-Phase Generator-Evaluator** pattern from ARS used in `outline-build` and `analysis-plan` — blind acceptance criteria first, prevents post-hoc rubric softening
 - **Material Passport** is in `shared/` because both research and coding need it; here in `research/` we explicitly emit at every analysis-plan boundary
-- **Voice calibration is one-shot** — run once after install on 3-5 of your published papers, then every draft skill loads `~/.agents/system-prompts/bora-voice.md`
+- **Voice calibration is one-shot** — run once after install on 3-5 of your published papers, then every draft skill loads `~/.agents/system-prompts/voice.md`
 - **No internet** — `guideline-cache-query` reads from `~/Research/cache/guidelines/` (refreshed during brief Research Mode lifts, not in-session)
 - **TOON sacked** — JSON Schema in all frontmatter `inputs:` and `outputs:` per Bora's feedback
 

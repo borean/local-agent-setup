@@ -60,11 +60,11 @@ Reference: LMS parameters for weight, length/height, head circumference,
 weight-for-length, BMI in Turkish children 0-18 years.
 
 NOT available as open machine-readable data. Most Turkish pediatric tools
-(including Bora's ceddcozum.vercel.app/tools/auxology) have transcribed
+(including the ceddcozum.vercel.app/tools/auxology pediatric calculator) have transcribed
 the tables manually.
 
 To populate this cache:
-  1. Open ceddcozum.vercel.app/tools/auxology (Bora's existing tool)
+  1. Open ceddcozum.vercel.app/tools/auxology (pediatric clinical calculator)
   2. Export LMS coefficients to CSV
   3. Save as $out/neyzi-2015-lms.csv
 

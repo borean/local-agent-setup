@@ -1,6 +1,6 @@
 # coding/ — Engineering Skill Bundle
 
-21 skills cherry-picked from upstream open-source libraries plus Bora's customs. Each upstream pull comes with a per-skill `BORA-NOTES.md` adapting it to the air-gapped medical-research context (where it applies).
+21 skills cherry-picked from upstream open-source libraries plus Bora's customs. Each upstream pull comes with a per-skill `PERSONAL-NOTES.md` adapting it to the air-gapped medical-research context (where it applies).
 
 ## Sub-categories
 

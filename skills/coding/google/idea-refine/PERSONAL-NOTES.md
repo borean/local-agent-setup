@@ -1,8 +1,8 @@
-# Bora's Notes — spec-driven-development
+# Personal Notes — idea-refine
 
 ## Why we lifted this
 
-Write the spec, then the test, then the code. Maps to pre-registered analysis.
+Hypothesis refinement loop. Maps to research question development.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

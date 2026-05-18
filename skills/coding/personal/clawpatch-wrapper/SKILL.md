@@ -2,7 +2,7 @@
 name: clawpatch-wrapper
 description: Wrap Peter Steinberger's clawpatch CLI (semantic feature-slice code review with explicit fix-attempt validation) as a skill our agents can invoke.
 domain: coding
-sub-category: bora
+sub-category: personal
 user-invocable: true
 target_models:
   primary: qwen3.6:35b-a3b-q4_K_M
@@ -45,4 +45,4 @@ clawpatch is a CLI (`npm install -g clawpatch`). Wrapping as a skill means:
 
 ## Credit
 
-clawpatch by [@steipete](https://x.com/steipete). Repository: [openclaw/clawpatch](https://github.com/openclaw/clawpatch). Site: [clawpatch.ai](https://clawpatch.ai). Surfaced in Bora's WhatsApp curation, May 2026.
+clawpatch by [@steipete](https://x.com/steipete). Repository: [openclaw/clawpatch](https://github.com/openclaw/clawpatch). Site: [clawpatch.ai](https://clawpatch.ai). Surfaced in WhatsApp link-digest curation, May 2026.

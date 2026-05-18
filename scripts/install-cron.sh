@@ -57,13 +57,13 @@ case "$SCHEDULE" in
 esac
 
 # Write plist
-PLIST=~/Library/LaunchAgents/com.bora.cron.${TASK}.plist
+PLIST=~/Library/LaunchAgents/com.local-agent.cron.${TASK}.plist
 cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.bora.cron.${TASK}</string>
+  <key>Label</key><string>com.local-agent.cron.${TASK}</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
@@ -87,4 +87,4 @@ EOF
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
 
-echo "✓ Installed: com.bora.cron.${TASK} (runs ${SCHEDULE} at ${HOUR}:$(printf '%02d' $MINUTE))"
+echo "✓ Installed: com.local-agent.cron.${TASK} (runs ${SCHEDULE} at ${HOUR}:$(printf '%02d' $MINUTE))"

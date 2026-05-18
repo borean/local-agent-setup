@@ -19,7 +19,7 @@ upstream:
 Cherry-picked from upstream for visualization use. Authoritative version at:
 https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines
 
-See `BORA-NOTES.md` for our research-visualization adaptation.
+See `PERSONAL-NOTES.md` for our research-visualization adaptation.
 
 ## Credit
 

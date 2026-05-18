@@ -1,9 +1,9 @@
 #!/bin/bash
 # notchi-hook.sh — fires at every event (PermissionRequest, PostToolUse, PreCompact, PreToolUse,
 #                  SessionEnd, SessionStart, Stop, SubagentStop, UserPromptSubmit)
-# Purpose: desktop notification on MacBook notch (per Bora's existing infrastructure)
+# Purpose: desktop notification on MacBook notch (per an optional MacBook notch-display integration)
 # Non-blocking (exit 0)
-# NOTE: this is the air-gap-compatible adaptation of Bora's existing notchi-hook.sh.
+# NOTE: this is the air-gap-compatible adaptation of the user's existing notchi-hook.sh (optional integration).
 # It does NOT make network calls. Pure local notification.
 
 INPUT=$(cat)

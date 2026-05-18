@@ -131,7 +131,7 @@ If we used your work and missed you, open an issue — we'll add you immediately
 
 ## How we credit in-place
 
-Every SKILL.md file ends with a `## Credit` section pointing to the original source. Every reference doc has citations inline. Every external cherry-pick lives next to a `BORA-NOTES.md` that says where it came from and how we adapted it.
+Every SKILL.md file ends with a `## Credit` section pointing to the original source. Every reference doc has citations inline. Every external cherry-pick lives next to a `PERSONAL-NOTES.md` (per-user adaptation notes; was named `BORA-NOTES.md` prior to v0.9.5) that says where it came from and how we adapted it.
 
 This file aggregates all of that for visibility.
 

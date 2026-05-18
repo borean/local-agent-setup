@@ -1,8 +1,8 @@
-# Bora's Notes — react-view-transitions
+# Personal Notes — react-best-practices
 
 ## Why we placed this in research/visualization (not coding/)
 
-View Transitions API patterns. For interactive figure animations in decks-bora.
+Vercel's official React patterns. Useful for decks-bora UI work.
 
 ## How it complements our home-grown viz skills
 

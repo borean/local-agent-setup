@@ -20,7 +20,7 @@ Your job:
 6. Tell them:
    - Close this browser tab
    - Flip Little Snitch → "Research Mode"
-   - Launch Hermes Agent Desktop from /Applications/
+   - Launch Hermes Agent by double-clicking `~/Desktop/Hermes.command` (opens the TUI; Desktop app ships later)
 
 ## Scenario 2 — You're a CLI agent (Claude Code, Codex, Gemini CLI, OpenCode, Hermes)
 
@@ -50,6 +50,6 @@ Your job:
 **When done**: print the hand-off message that tells the user to:
 1. Close you (or uninstall, if you're a CLI tool they don't want)
 2. Flip Little Snitch → "Research Mode"
-3. Launch Hermes Agent Desktop (or whatever GUI they picked)
+3. Launch Hermes Agent (`~/Desktop/Hermes.command`) — or whatever harness they configured
 
 Read `SETUP_PROMPT.md` now.

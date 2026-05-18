@@ -119,7 +119,7 @@ Calibrating from 4 papers (12,847 words)...
   Citation density:  8.2 per paragraph     (high; you cite densely)
   Code-switch:       0.3% (English-dominant, occasional Turkish patient quotes)
 
-Written: ~/.agents/system-prompts/bora-voice.md
+Written: ~/.agents/system-prompts/voice.md
 Future drafts will match this profile.
 ```
 

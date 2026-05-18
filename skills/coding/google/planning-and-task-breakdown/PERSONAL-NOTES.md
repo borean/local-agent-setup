@@ -1,8 +1,8 @@
-# Bora's Notes — composition-patterns
+# Personal Notes — planning-and-task-breakdown
 
 ## Why we lifted this
 
-Generic React composition. For when you vibe-code React.
+Task decomposition with dependency graph. Pairs with our analysis-plan skill.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: vercel-labs/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

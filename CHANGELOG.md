@@ -1,5 +1,85 @@
 # Changelog
 
+## [0.9.5] — 2026-05-19 — Existing-assets audit + headless wording sweep
+
+Two converged review findings: (1) every external auditor flagged that the repo assumes a greenfield Mac and would blindly redownload 35–64 GB of models the user may already have; (2) the repo carried personal wording (`bora` paths, "Bora's adaptation", "Turkish pediatric endocrinologist" persona) that's noise for non-author users. Both addressed in this release.
+
+### Added — existing-assets audit in PRE-CHECK
+
+PRE-CHECK now scans the machine before any download and writes a manifest to `~/.research/setup-existing-assets.txt`. Catalogued:
+
+- Ollama installations + model list (`ollama list`)
+- LM Studio model cache (`~/.lmstudio/models/`)
+- HuggingFace cache (`~/.cache/huggingface/hub/`)
+- Existing Hermes config (`~/.hermes/config.yaml` — includes its current `base_url` so the agent knows if it's pointed at a cloud provider)
+- Hermes binary on PATH
+- Existing `~/.agents/skills/` tree (with skill count)
+- Existing `~/.agents/hooks/` (with hook count)
+- pipx-installed packages (`pipx list --short`)
+- npm globals (`npm ls -g`)
+
+The audit is persisted as `$EXISTING_ASSETS` in `~/.research/setup-env`. Downstream phases consult it before downloading or overwriting.
+
+### Added — reuse branches in Phases 1 / 2 / 5 / 7
+
+Each phase now offers explicit reuse/skip/overwrite branches:
+
+- **Phase 1 (models)**: detects existing Qwen 3.6 / LFM2.5 weights in Ollama / LM Studio / HF cache. Three options: `(r)` reuse via symlink into `~/.research/models/`, `(d)` download fresh (pin a specific revision), `(s)` skip Phase 1 model downloads entirely. The HF CLI download is idempotent anyway, but the symlink path saves 35-64 GB on power-user Macs.
+- **Phase 2 (skills)**: detects an existing `~/.agents/skills/` tree (130+ skills is typical for a power-user coding-agent setup). Three options: `(m)` merge with `cp -Rn` (existing wins on collision), `(n)` namespace install to `~/.agents/skills-local-agent/` (keep separate), `(o)` overwrite (destructive). New `$SKILLS_TARGET` variable threads through to Hermes config in Phase 7.
+- **Phase 5 (ceddcozum)**: gated on `$INSTALL_CEDDCOZUM` from pre-flight Q9 (defaults to skip for non-pediatric fields). Phase 5 also reuses an existing global `ceddcozum` install rather than reinstalling.
+- **Phase 7 (Hermes)**: detects an existing `~/.hermes/config.yaml` and offers `(b)` backup-then-write (default), `(s)` skip (keep existing config, user must manually point skills/hooks paths), `(o)` overwrite. Reuses the `hermes` binary if already on PATH.
+
+### Added — Turkish-Gemma is now language-gated, not field-gated
+
+Phase 1 Turkish-Gemma download was previously triggered by `$FIELD = "pediatric endocrinology"` (weird coupling — non-medical Turkish writers got no Turkish model). Now gated on `$LANG_HINT = "tr"`, asked as the new pre-flight Q8.
+
+### Changed — headless wording sweep (repo is now author-agnostic)
+
+The repo was carrying personal wording inherited from the seed-user's setup. Stripped:
+
+- `skills/coding/bora/` → `skills/coding/personal/` (renamed via `git mv`)
+- All 20 `BORA-NOTES.md` files → `PERSONAL-NOTES.md` (renamed via `git mv`)
+- `sub-category: bora` → `sub-category: personal` in 3 SKILL.md frontmatters
+- `com.bora.*` launchd labels → `com.local-agent.*` in both `SETUP_PROMPT.md` plists and `scripts/install-cron.sh`
+- `bora-voice.md` voice profile filename → `voice.md` (still parameterized as `${USERNAME}-voice.md` at install)
+- "Bora's Notes —" header → "Personal Notes —" across all PERSONAL-NOTES.md
+- "Bora is a Turkish pediatric endocrinologist; this is built for his workflow" → "Built around a clinical-research workflow (peds endocrinology was the seed, but the design generalizes to oncology, cardiology, rheumatology, internal medicine, etc.)"
+- "You are setting up a medical research workstation for a Turkish pediatric endocrinologist" → "You are setting up a medical-research workstation for a clinical researcher"
+- Air-gap preamble: "You are running on a Turkish pediatric endocrinologist's local Qwen 3.6 model." → "You are running on the user's local Qwen 3.6 model."
+- "For Bora's setup we use llama-server direct" → "Default path is llama-server / mlx_lm.server direct"
+- "Bora's existing infrastructure" / "Bora's existing 130+ Claude Code skills" / "Bora vibes React" / "decks-bora animations" / etc. — generalized in `references/`
+- README tree diagram: `└── bora/` → `└── personal/`
+- README "Skills: 43-skill medical-research bundle" → "74 SKILL.md files in three bundles"; Hooks count corrected to 11
+
+What's preserved: `CREDITS.md` attribution (Bora as author/curator), `CHANGELOG.md` history (records of past decisions), `DECISIONS.md` (local-machine state file), `docs/` historical planning artifacts, GitHub URL `github.com/borean/local-agent-setup` (repo owner is `borean` — that's the GitHub handle, not personal noise).
+
+### Changed — pre-flight Q&A expanded to 10 questions
+
+Was 8, now 10. New questions:
+
+- **Q7 (was first-paper-only)**: Clinical field / research domain — now universal. Drives field-preset generation, style-calibration generic mode, downstream skill defaults.
+- **Q8 (new)**: Primary clinical writing language (en / tr / other). Drives Turkish-Gemma download decision.
+- **Q9 (new)**: Install ceddcozum? (y/n). Recommended y only if field involves pediatrics.
+- **Q10 (was Q8)**: Confirm Hermes Agent — now phrased "TUI today, Desktop arrives later" (was incorrectly "Hermes Agent Desktop").
+
+### Changed — Hermes Agent Desktop stale references removed
+
+Phase 7 was already correct (v0.9.2 fix). Mopped up stale "Hermes Agent Desktop" mentions in README, AGENTS.md, and the SETUP_PROMPT.md INITIAL CONTEXT block. The repo now consistently says "Hermes Agent (TUI today, Desktop later)" everywhere user-facing.
+
+### Changed — README Status section refreshed
+
+Was stale since v0.3.0 (claimed 0/43 skill files written, 0/10 hooks). Updated to v0.9.5 reality: 74 SKILL.md files, 11 hooks, 7 cron tasks, 11-phase SETUP_PROMPT, verification suite, existing-assets audit. Open items: real-machine install validation (Phase A first), Linux/Windows walk-throughs, public release post-validation.
+
+### Open (carried from prior versions)
+
+- Real-machine install validation: Phase A spine smoke test (1-2 h) recommended before full install (~2 h, 64 GB downloads). See `references/phase-a-smoke-test.md`.
+- Linux + Windows full setup walk-throughs (deferred; cross-platform notes exist)
+- Field preset population for non-peds-endo fields (oncology / IM / surgery stubs in `references/field-preset-examples/`)
+- Hermes-Raindrop OTLP bridge smoke test (untested)
+- Public release post real-install validation
+
+---
+
 ## [0.9.4] — 2026-05-19 — Round-3 review fixes: dispatcher scripts, filenames, generalize literature path
 
 Round-3 5-way review (Grok + Claude + Composer + ChatGPT + Minimax) surfaced six real bugs + one user question. Fixing.

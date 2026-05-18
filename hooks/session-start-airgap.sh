@@ -33,7 +33,7 @@ fi
 
 # ── 4. Voice profile presence ──────────────────────────────────────────
 VOICE_LOADED="no"
-VOICE_FILE=~/.agents/system-prompts/bora-voice.md
+VOICE_FILE=~/.agents/system-prompts/voice.md
 [ -f "$VOICE_FILE" ] && VOICE_LOADED="yes"
 
 # ── 5. Currently loaded llama-server model ─────────────────────────────

@@ -1,6 +1,6 @@
 # PR: Data-Viz Skill Upgrade
 
-**Target**: Bora's existing data-viz skill (in his Claude Code skills directory)
+**Target**: an existing user data-viz skill (cherry-picked into `~/.agents/skills/research/visualization/`)
 **Goal**: integrate the design intel surfaced from his WhatsApp curation without replacing the skill — additive only.
 
 This is a PR-style spec. Hand it to your frontier LLM (or apply yourself) against your existing skill file.
@@ -81,7 +81,7 @@ Safe across deuteranopia, protanopia, and tritanopia.
 **Add to a new "Motion" section** (only relevant for HTML/JS dashboards, not static PDF figures):
 
 ```markdown
-## Motion (interactive viz only — D3.js, Plotly hover, decks-bora)
+## Motion (interactive viz only — D3.js, Plotly hover, web-based decks)
 
 For animated transitions in interactive charts:
 

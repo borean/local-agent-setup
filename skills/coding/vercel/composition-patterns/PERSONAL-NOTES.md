@@ -1,8 +1,8 @@
-# Bora's Notes — context-engineering
+# Personal Notes — composition-patterns
 
 ## Why we lifted this
 
-The most important cross-cutting skill. Implements Anthropic's context-engineering framework.
+Generic React composition. For when you vibe-code React.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: vercel-labs/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

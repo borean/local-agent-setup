@@ -1,8 +1,8 @@
-# Bora's Notes — web-design-guidelines
+# Personal Notes — react-view-transitions
 
 ## Why we placed this in research/visualization (not coding/)
 
-Vercel's design rules. Complements our data-viz upgrade (OKLCH + Wong + Emil).
+View Transitions API patterns. For interactive figure animations in decks-bora.
 
 ## How it complements our home-grown viz skills
 

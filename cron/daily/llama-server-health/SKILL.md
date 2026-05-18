@@ -19,7 +19,7 @@ Air-gap variant of Bora's existing `process-guardian`. Checks the OAI-compat end
    Return code 0 = healthy.
 
 2. If unhealthy:
-   - Check launchctl status: `launchctl list | grep com.bora.llama-server`
+   - Check launchctl status: `launchctl list | grep com.local-agent.llama-server`
    - If service crashed, attempt restart: `launchctl unload && launchctl load`
    - Verify again. If still unhealthy after restart, escalate to notification.
 

@@ -1,8 +1,8 @@
-# Bora's Notes — improve-codebase-architecture
+# Personal Notes — zoom-out
 
 ## Why we lifted this
 
-For maintaining the local-agent-setup repo itself.
+When you're stuck in the weeds, force the global view. Often paired with material-passport-emit.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: mattpocock/skills/engineering. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: mattpocock/skills/engineering. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

@@ -35,7 +35,7 @@ Verified May 19, 2026 against Hugging Face file sizes. **Bookmark this — it's 
 ### Model storage scenarios
 
 ```
-Pediatric endocrinology (Bora's case), full install:
+Pediatric endocrinology (example case), full install:
   Qwen 3.6 35B-A3B GGUF UD-Q4_K_M    20.61 GB
   Qwen 3.6 27B dense Q4_K_M           15.66 GB
   LFM2.5-350M Q8_0                     0.36 GB
@@ -71,7 +71,7 @@ Minimum viable (one Qwen, English):
 | **Quarto + extensions** | ~200 MB | quarto binary + journal templates (jama, nejm, lancet, elsevier) |
 | **Hermes Agent Desktop** | ~200 MB | Application bundle |
 | **Raindrop Workshop** | ~100 MB | Bun binary + DB |
-| **LEANN index** (Zotero corpus) | 6-12 GB | Roughly: 1 GB per 5M chunks. Bora's typical Zotero (~2000 papers, ~5000 chunks/paper) lands ~10 GB. |
+| **LEANN index** (Zotero corpus) | 6-12 GB | Roughly: 1 GB per 5M chunks. A typical Zotero (~2000 papers, ~5000 chunks/paper) lands ~10 GB. |
 | **Audit logs** | 50-200 MB/year | JSONL append-only; gzip after 7 days reduces by ~80% |
 | **Manuscript snapshots** | 100-500 MB | Cap of 12 snapshots/manuscript × your active manuscripts |
 | **Cached journal templates** | ~100 MB | Cloned via git from quarto-journals/* |
@@ -82,7 +82,7 @@ Minimum viable (one Qwen, English):
 ## All-in totals
 
 ```
-Bora's full install (peds endo, both models, Turkish, full venv, LEANN):
+Full peds-endo install (both Qwen models, Turkish-Gemma, full venv, LEANN):
   Models:               44.14 GB
   Python venv:           4.00 GB
   Python wheelhouse:     4.00 GB

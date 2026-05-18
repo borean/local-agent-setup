@@ -3,7 +3,7 @@ name: zero-tech-debt
 description: Rework a change as if the intended UX and architecture existed from day one, deleting compatibility cruft and accidental complexity.
 user-invocable: true
 domain: coding
-sub-category: bora
+sub-category: personal
 target_models:
   primary: qwen3.6:27b-q4_K_M
   fallback: qwen3.6:35b-a3b-q4_K_M
@@ -38,7 +38,7 @@ Rework the change from the intended end state, not from the historical path that
 - Keep the refactor scoped to what makes the final shape coherent.
 - Prefer names that describe product intent over implementation history.
 
-## Bora's adaptation for medical-research code
+## Adaptation for medical-research code
 
 For analysis scripts and manuscript code, this skill maps as:
 

@@ -1,6 +1,6 @@
 # Colleague Onboarding — Air-Gapped Local LLM for Academic Research
 
-**Adapted from**: an excellent 5-part Claude Code tutorial for academic researchers (author unknown, shared by Bora).
+**Adapted from**: an excellent 5-part Claude Code tutorial for academic researchers (author unknown; surfaced from a curated link digest).
 **Adapted for**: our air-gapped local Qwen 3.6 stack via Hermes Agent Desktop. No Claude Code, no internet, no terminal.
 **Audience**: clinician colleagues with no programming background. The author writes: *"If you can write sentences in English, you can use Hermes Agent Desktop."*
 

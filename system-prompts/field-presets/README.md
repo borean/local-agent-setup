@@ -6,7 +6,7 @@ Reference templates live in `references/field-preset-examples/` — those are se
 
 ## What gets generated here
 
-After setup, this folder contains a single file: `{user-field-slug}.md` (e.g., `pediatric-endocrinology.md` for Bora, `oncology-immunotherapy-us.md` for an oncologist in the US).
+After setup, this folder contains a single file: `{user-field-slug}.md` (e.g., `pediatric-endocrinology.md`, `oncology-immunotherapy-us.md`, `internal-medicine-eu.md`, etc.).
 
 The file is loaded by `style-calibration --mode generic --field "<user-field>"` and merged into the local model's system prompt at every session start.
 

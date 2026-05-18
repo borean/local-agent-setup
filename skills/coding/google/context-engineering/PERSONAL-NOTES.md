@@ -1,8 +1,8 @@
-# Bora's Notes — triage
+# Personal Notes — context-engineering
 
 ## Why we lifted this
 
-Task prioritization with cost/benefit. Use when you have 10 things to fix and 2 hours.
+The most important cross-cutting skill. Implements Anthropic's context-engineering framework.
 
 ## How it maps to our medical-research context
 
@@ -22,4 +22,4 @@ Mitigation: when the skill produces a recommendation we're unsure about, run `pe
 
 ## Credit
 
-Upstream: mattpocock/skills/engineering. We respect their license terms; the SKILL.md content is theirs, this BORA-NOTES.md is ours.
+Upstream: addyosmani/agent-skills. We respect their license terms; the SKILL.md content is theirs, this PERSONAL-NOTES.md is yours.

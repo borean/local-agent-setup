@@ -8,7 +8,7 @@
 
 ---
 
-Load this as part of the local model's system prompt on every session-launch. Layer the `bora-voice.md` profile and the `air-gap-preamble.md` on top.
+Load this as part of the local model's system prompt on every session-launch. Layer the `voice.md` profile and the `air-gap-preamble.md` on top.
 
 ---
 
@@ -69,13 +69,13 @@ Class components? Don't fork to hooks silently. Testing patterns assumed compone
 ~/.agents/system-prompts/
 ├── karpathy-12-rules.md   ← this file, always loaded
 ├── air-gap-preamble.md    ← air-gap context + KVKK reminder
-└── bora-voice.md          ← style-calibration output (Skill #25)
+└── voice.md          ← style-calibration output (Skill #25)
 ```
 
 On `session-launch`, the harness concatenates:
 1. Karpathy 12 rules (this file, ~1.5K tokens)
 2. Air-gap preamble (~500 tokens)
-3. Bora voice profile (~800 tokens)
+3. User voice profile (~800 tokens)
 4. Task-specific skill SKILL.md (variable, ~500-2K tokens)
 
 Total system prompt budget: ~5K tokens. Well within Qwen 3.6 256K context.

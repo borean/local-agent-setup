@@ -2,7 +2,7 @@
 name: ceddcozum-tools
 description: Dispatch 33 pediatric clinical calculators from Bora's ceddcozum NPM CLI as agent-callable tools. Auxology/SDS, BMD/vBMD, blood pressure percentiles, steroid conversion, HbA1c↔glucose, insulin resistance, growth-hormone dosing, IGF SDS, thyroid volume SDS, and more. All calculations local; no network.
 domain: coding
-sub-category: bora
+sub-category: personal
 user-invocable: true
 target_models:
   primary: qwen3.6:35b-a3b-q4_K_M
@@ -24,7 +24,7 @@ outputs:
 
 # ceddcozum Tools Wrapper
 
-Exposes Bora's [ceddcozum](https://github.com/borean/ceddcozum) NPM package (v0.2.2, 33 calculators) as callable tools for the local Qwen.
+Exposes [ceddcozum](https://github.com/borean/ceddcozum) NPM package (v0.2.2, 33 calculators) as callable tools for the local Qwen.
 
 ## What it does
 
