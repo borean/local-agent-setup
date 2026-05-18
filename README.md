@@ -8,7 +8,9 @@ A fully-local, air-gapped LLM environment for medical research — statistics, l
 
 ## What this is
 
-A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM environment on Apple Silicon Mac.
+A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM environment.
+
+**Hardware**: 32 GB RAM minimum for Qwen 3.6 35B-A3B Q4. Apple Silicon Mac is recommended (unified memory + MLX = ~80 tok/s), but Linux (CUDA/ROCm) and Windows (CUDA, WSL2 preferred) are supported via the GGUF + llama.cpp path. The truly Mac-only pieces (Little Snitch, launchctl) have Linux/Windows equivalents documented in `references/cross-platform-notes.md`.
 
 - **Inference**: `llama-server` (llama.cpp Metal build) on `localhost:11434`
 - **Models**: Qwen 3.6 27B dense (writing/reasoning) + Qwen 3.6 35B-A3B MoE (coding/agentic), one at a time
@@ -82,8 +84,8 @@ The CLI path is ~30% faster (the agent runs commands directly) but requires you 
 local-agent-setup/
 ├── README.md              ← you are here
 ├── AGENTS.md              ← entry-point for AI agents reading this repo
-├── PLAN.md                ← high-level architecture
 ├── SETUP_PROMPT.md        ← the prompt the frontier LLM follows to set you up
+├── CREDITS.md             ← every contributor + library credited
 ├── LICENSE                ← Apache-2.0
 ├── CHANGELOG.md
 │

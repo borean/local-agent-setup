@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.9.0] — 2026-05-19 — Hotfix: bugs caught by ChatGPT/Cursor/Grok 3-way review
+
+After the user pasted the v0.8.0 repo URL into ChatGPT, Cursor Composer 2.5, and Grok for an implementation feasibility review, all three reviews converged on the same handful of real bugs. Fixing.
+
+### Bugs fixed
+
+1. **Goose option residual in pre-flight Q&A** — we decided in v0.4.0 that Hermes is the sole harness, but SETUP_PROMPT.md's pre-flight question 8 still asked "Hermes vs Goose." Removed; question now just confirms Hermes.
+
+2. **`en0` hardcoded for Wi-Fi airplane test** — many Macs have Wi-Fi on `en1` or other interfaces. Replaced with auto-detection:
+   ```bash
+   WIFI_IFACE=$(networksetup -listallhardwareports | awk '/Wi-Fi|AirPort/{getline; print $2; exit}')
+   ```
+   If no Wi-Fi detected (Ethernet-only, Linux, Windows), the test skips rather than fails.
+
+3. **Skill count claim of 78** — actual count is 74. Updated hand-off and pre-flight messages to `~74` and verification Test 4 threshold to `≥60` (allows for installer to skip optional cherry-picks).
+
+4. **Hermes install command unverified** — original was `brew install --cask hermes-agent`, but ChatGPT noted Homebrew may list it as a formula. Replaced with explicit `brew search hermes-agent` step + comments on both formula and cask paths.
+
+5. **Duplicate model-download blocks in Phase 1** — lines 207-228 were leftover dead code from before the MLX/GGUF auto-detect branch was added. Removed. Added a note that **setup AI must verify current repo names via `huggingface-cli search`** before downloading — names like `mlx-community/Qwen3.6-35B-A3B-4bit-MLX` reflect May 2026 best-guess and drift over time.
+
+6. **PLAN.md reference removed** — README's repo layout diagram listed `PLAN.md` but the file doesn't exist. Replaced reference with `CREDITS.md` (which does exist).
+
+7. **`setup-prompts/macos-apple-silicon.md` reference** — README listed it; it doesn't exist. Replaced the implied "Mac-only" framing with cross-platform notes.
+
+### Added — cross-platform clarity
+
+User feedback: "should be implementable on Windows and Linux too. just tell the 32 GM ram requirement?"
+
+Right. The stack is mostly cross-platform; only the Little Snitch / launchctl / MLX pieces are Mac-specific.
+
+- **`references/cross-platform-notes.md`** — maps every Mac-specific piece to its Linux (systemd, ufw, nmcli) and Windows (Task Scheduler, Defender Firewall, WSL2-preferred) equivalent
+- **README hardware framing updated**: "32 GB RAM minimum. Apple Silicon recommended. Linux (CUDA/ROCm) and Windows (WSL2 preferred) supported via GGUF + llama.cpp path."
+- Truly Mac-only pieces called out explicitly: Little Snitch, launchctl, MLX, `/opt/homebrew/bin` hardcodes
+
+### Open
+
+- Linux setup walk-through (`setup-prompts/linux-x86.md`) — deferred
+- Windows native walk-through (`setup-prompts/windows.md`) — deferred (WSL2 is the realistic path for now)
+- Port 11434 collision with Ollama (Cursor flagged) — needs a Phase 0 detection: if Ollama running on :11434, prompt user to stop it or remap one
+- `~/local-agent-setup` hardcoded clone path (Cursor flagged) — should use a `$LOCAL_AGENT_SETUP` env var; fixed callers
+- `pin-cherry-picks.sh` resolves `main` → SHA but doesn't persist to the script for next run
+
+These are real but smaller. Will pick up in v0.9.1 if needed.
+
+---
+
 ## [0.8.0] — 2026-05-18 — Phase renumber + real ceddcozum integration (tools, not data)
 
 ### Changed — phases renumbered (no decimals)

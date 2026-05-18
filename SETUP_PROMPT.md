@@ -24,7 +24,7 @@ After reading: you understand that **you (the frontier model) will be uninstalle
 - `llama-server` (llama.cpp Metal) on `localhost:11434` serving Qwen 3.6 27B or 35B-A3B
 - `llama-server` on `localhost:11436` serving LFM2.5-350M (always-warm tool-call router)
 - Hermes Agent Desktop as the GUI
-- The 78 SKILL.md files in `~/.agents/skills/`
+- The ~74 SKILL.md files in `~/.agents/skills/`
 - 11 hooks in `~/.agents/hooks/`
 - 7 launchctl cron tasks
 - Little Snitch "Research Mode" profile
@@ -65,9 +65,10 @@ Run these exact questions back-to-back. Capture answers; do not ask again.
 7. Field for generic-mode style baseline (only if first-paper):
    Options: "pediatric endocrinology" | "oncology" | "internal medicine" | "surgery" | other
 
-8. Hermes Agent Desktop OR Goose Desktop?
-   Default: Hermes Agent Desktop (per harness_brief.md decision).
-   Both are SKILL.md-compatible; pick Hermes unless user has a preference.
+8. Confirm Hermes Agent Desktop as the daily-use GUI.
+   This is the only supported harness in v0.x — see harness_brief.md.
+   If user has a hard preference for something else (Cline, Continue, etc.):
+   note it and flag as out-of-scope; they install separately after this setup.
 ```
 
 After this block, commit each answer to `~/.research/setup-answers.yaml` for audit.
@@ -201,35 +202,27 @@ fi
 wait
 
 # Verify download integrity
-cd ~/.research/models && find . -name "*.gguf" -o -name "*.safetensors" -o -name "*.npz" | xargs sha256sum > checksums.txt 2>/dev/null
-
-# Download GGUFs (in parallel where possible — wget in background)
-huggingface-cli download \
-    unsloth/Qwen3.6-35B-A3B-GGUF \
-    Qwen3.6-35B-A3B-Q4_K_M.gguf \
-    --local-dir ~/.research/models &
-
-huggingface-cli download \
-    unsloth/Qwen3.6-27B-GGUF \
-    Qwen3.6-27B-Q4_K_M.gguf \
-    --local-dir ~/.research/models &
-
-huggingface-cli download \
-    LiquidAI/LFM2.5-350M-tool-use-GGUF \
-    LFM2.5-350M-tool-use-Q8_0.gguf \
-    --local-dir ~/.research/models &
-
-# If Turkish user
-[ "$FIELD" = "pediatric endocrinology" ] && huggingface-cli download \
-    ytu-ce-cosmos/Turkish-Gemma-9b-T1-GGUF \
-    Turkish-Gemma-9b-T1-Q4_K_M.gguf \
-    --local-dir ~/.research/models &
-
-wait
-
-# Verify download integrity
-cd ~/.research/models && sha256sum *.gguf > checksums.txt
+cd ~/.research/models && find . -name "*.gguf" -o -name "*.safetensors" -o -name "*.npz" 2>/dev/null | xargs sha256sum > checksums.txt 2>/dev/null
 ```
+
+**Important — model repo names drift.** Before running the `huggingface-cli download` lines above, **the setup AI must verify each repo exists** by running:
+
+```bash
+huggingface-cli scan-cache  # what's already cached
+# Then for each candidate repo name, e.g.:
+huggingface-cli download --revision=main mlx-community/Qwen3.6-35B-A3B-4bit --max-files=1
+```
+
+The names in this prompt (`mlx-community/Qwen3.6-35B-A3B-4bit-MLX`, `LiquidAI/LFM2.5-350M-tool-use-GGUF`, etc.) reflect May 2026 best-guess. They may have been renamed since. If a 404 hits, **search HuggingFace**:
+
+```bash
+# Search HF for current canonical names before downloading
+huggingface-cli search "Qwen3.6 35B A3B" --limit 10
+huggingface-cli search "LFM2.5 350M GGUF" --limit 5
+huggingface-cli search "Turkish Gemma" --limit 5
+```
+
+Pick the highest-download official repo; pin the commit SHA in `~/.research/lessons.md` for reproducibility.
 
 Write launchctl plists (two services). Server binary depends on inference format:
 
@@ -583,12 +576,14 @@ cat ~/.agents/system-prompts/${USERNAME}-voice.md | head -20
 ## PHASE 7 — DAILY-USE GUI (Hermes Agent Desktop, ~5 min)
 
 ```bash
-# Install Hermes Agent Desktop
-brew install --cask hermes-agent
-
-# Or via direct download if cask not available:
-# curl -L https://hermesatlas.com/hermes-agent-desktop.dmg -o /tmp/hermes.dmg
-# hdiutil attach /tmp/hermes.dmg && cp -r /Volumes/Hermes/Hermes\ Agent.app /Applications/
+# Install Hermes Agent — VERIFY install method before running
+# Per ChatGPT/Cursor review (May 2026): Homebrew may list it as a formula,
+# not a cask. Check current state first:
+brew search hermes-agent
+# Then install with whichever form Homebrew currently lists:
+#   brew install hermes-agent             # formula path (most likely)
+#   brew install --cask hermes-agent      # cask path (if .app bundle published)
+# Or fall back to direct download from hermesatlas.com if neither works.
 
 # Configure via plist (avoid first-run wizard for headless setup)
 defaults write com.nousresearch.hermes-agent provider "openai-compatible"
@@ -692,19 +687,25 @@ curl -s http://localhost:11434/v1/chat/completions \
 TRAFFIC=$(sudo tcpdump -i any -c 50 -n 'not host 127.0.0.1 and not host ::1' 2>/dev/null | wc -l)
 [ "$TRAFFIC" -eq 0 ] || { echo "TEST 2 FAIL: external traffic during air-gap"; exit 1; }
 
-# Test 3: Wi-Fi airplane test
-networksetup -setairportpower en0 off
-sleep 3
-curl -s http://localhost:11434/v1/chat/completions \
-    -H "Authorization: Bearer local" \
-    -d '{"messages":[{"role":"user","content":"Reply: ok"}],"max_tokens":5}' \
-    | jq -e '.choices[0].message.content' || { echo "TEST 3 FAIL: chat broken in airplane mode"; exit 1; }
-networksetup -setairportpower en0 on
-echo "TEST 3 PASS: chat works offline ✓"
+# Test 3: Wi-Fi airplane test — auto-detect interface (en0 is not universal)
+WIFI_IFACE=$(networksetup -listallhardwareports | awk '/Wi-Fi|AirPort/{getline; print $2; exit}')
+if [ -z "$WIFI_IFACE" ]; then
+    echo "TEST 3 SKIP: no Wi-Fi interface detected (Ethernet-only / Linux / Windows path)"
+else
+    networksetup -setairportpower "$WIFI_IFACE" off
+    sleep 3
+    curl -s http://localhost:11434/v1/chat/completions \
+        -H "Authorization: Bearer local" \
+        -d '{"messages":[{"role":"user","content":"Reply: ok"}],"max_tokens":5}' \
+        | jq -e '.choices[0].message.content' || { echo "TEST 3 FAIL: chat broken in airplane mode"; exit 1; }
+    networksetup -setairportpower "$WIFI_IFACE" on
+    echo "TEST 3 PASS: chat works offline ✓"
+fi
 
-# Test 4: skill discovery
+# Test 4: skill discovery (~70 expected after Phase 2 + Phase 5 ceddcozum-tools; allow some variance)
 SKILL_COUNT=$(find ~/.agents/skills -name "SKILL.md" | wc -l)
-[ "$SKILL_COUNT" -ge 70 ] || { echo "TEST 4 FAIL: only $SKILL_COUNT skills discovered, expected ≥70"; exit 1; }
+[ "$SKILL_COUNT" -ge 60 ] || { echo "TEST 4 FAIL: only $SKILL_COUNT skills discovered, expected ≥60"; exit 1; }
+echo "TEST 4 PASS: $SKILL_COUNT skills discovered ✓"
 
 # Test 5: hook fire — simulate session start
 echo '{"session_id":"verify-test","cwd":"/tmp"}' | bash ~/.agents/hooks/session-start-airgap.sh | head -5
@@ -747,7 +748,7 @@ After all 10 tests pass:
 
   • llama-server running on :11434 (Qwen 3.6 35B-A3B)
   • LFM2.5-350M router on :11436 (always warm)
-  • 78 skills installed at ~/.agents/skills/
+  • ~74 skills installed at ~/.agents/skills/ (count: $(find ~/.agents/skills -name SKILL.md | wc -l))
   • 11 hooks at ~/.agents/hooks/
   • 7 cron tasks scheduled
   • Voice profile: $([ "$FIRST_PAPER" = "true" ] && echo "GENERIC ($FIELD)" || echo "CALIBRATED from your papers")
