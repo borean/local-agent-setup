@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.2.0] — 2026-05-18 — Skills restructure + Raindrop Workshop
+
+### Restructured
+
+- **Skills now split into three bundles**: `shared/`, `research/`, `coding/`. Each independently installable. Each has its own README explaining scope.
+- `skills/meta/` → renamed and split: cross-cutting infrastructure went to `skills/shared/`; the coding-specific zero-tech-debt went to `skills/coding/bora/zero-tech-debt/`.
+- Frontmatter convention updated: `domain: shared | research | coding` replaces `pillar:`. `pillar:` becomes a *sub-pillar* within research (literature/statistics/manuscript/visualization/medical-domain/peer-review).
+- Added `skills/README.md` explaining the three-bundle architecture + how runtime filtering by `domain:` works
+- Added per-bundle READMEs in `skills/shared/`, `skills/research/`, `skills/coding/`
+
+### Added
+
+- **Raindrop Workshop** (raindrop-ai/workshop) added to preflight install order as **Step 4b** alongside mitmproxy. Local-first agent debugger from Ben Hylak. MIT, 641⭐. Resolves the TODO from v0.1.0.
+- Self-healing eval loop notes — Raindrop writes evals, runs agent, fixes failures, re-runs.
+- Relationship to mitmproxy: HTTP-level wiretap vs agent-level semantic tracer. Both kept; complementary.
+- Relationship to inspect-ai: offline batched evals vs in-the-loop tracing. Both kept; complementary.
+
+### Decisions
+
+- Three-bundle split for "ease of use and maintenance" per Bora's request
+- Coding bundle is **optional** — clinicians who don't vibe-code install only `shared/` + `research/`
+- Cherry-pick mapping refined: 3 of 7 vercel-labs skills moved from `coding/vercel/` to `research/visualization/` (react-best-practices stays in coding because it's about React itself; react-view-transitions, web-design-guidelines, composition-patterns → no wait, composition-patterns stays coding too. Only react-view-transitions and web-design-guidelines moved.) Actually corrected: see `skills/coding/README.md` for final mapping.
+
+### Repository housekeeping
+
+- Updated README repo-layout diagram to show three-bundle structure
+- Pinned-commit policy added to coding/README — quarterly refresh cadence, eval-suite gate on bumps
+
+---
+
 ## [0.1.0] — 2026-05-18 — Initial scaffolding
 
 ### Added

@@ -58,7 +58,7 @@ Install `uv` (the Astral team behind `ruff`; 10-100× faster than pip+venv). The
 
 ---
 
-## 4. VISIBILITY — `mitmproxy` in front of every LLM call
+## 4a. VISIBILITY part 1 — `mitmproxy` in front of every LLM call
 
 It's basically a wiretap for your agent. Install it, point your agent through it, and now you see every conversation your agent has with the model in real time.
 
@@ -72,6 +72,42 @@ It's basically a wiretap for your agent. Install it, point your agent through it
 **The part nobody talks about**: if a website your agent scraped slipped instructions into its data, mitmproxy is how you SEE the moment your agent decides to follow them. Without this layer, you're trusting your agent did the right thing, not verifying.
 
 *For our air-gapped context: mitmproxy on `localhost:11434` for all llama-server calls. Logs go straight into `~/Research/audit/YYYY-MM-DD/`. KVKK Art. 12 audit trail with prompt-level granularity.*
+
+---
+
+## 4b. VISIBILITY part 2 — Raindrop Workshop for semantic agent traces
+
+**Source**: Ben Hylak / raindrop-ai (May 2026), MIT licensed, 641⭐ at time of writing.
+**Repo**: https://github.com/raindrop-ai/workshop
+**Install**: `curl -fsSL https://raindrop.sh/install | bash`
+
+**What it does**: local-first agent debugger. Watch your agent think — every token, every tool call, every decision — streamed live into a browser UI at `http://localhost:5899`. SQLite DB at `~/.raindrop/raindrop_workshop.db`. No cloud, no telemetry.
+
+**The self-healing eval loop is the gem**: Claude (or Hermes) writes the eval, runs your agent, sees the failure, fixes the code, re-runs — until every assertion passes. Replaces the "I'll write evals later" graveyard.
+
+**How it differs from mitmproxy**:
+- mitmproxy: HTTP-level wiretap. Shows raw bytes. Great for prompt-injection forensics + KVKK audit.
+- Raindrop Workshop: agent-level semantic tracer. Shows tool-call graphs + decision points + token streams.
+- **Use both.** mitmproxy is the legal/compliance audit layer; Raindrop is the dev-loop visibility layer.
+
+**Air-gap fit**:
+- 100% local-first (SQLite, no cloud)
+- Supports all major SDKs: Vercel AI SDK, OpenAI Agents SDK, Anthropic SDK, Claude Agent SDK, LangChain, LangGraph, CrewAI, Pydantic AI, DSPy
+- Supports our coding agents: Claude Code, Codex, OpenCode (Hermes Agent compatibility: pending — Hermes uses its own SDK; check if it can speak to Raindrop's `RAINDROP_LOCAL_DEBUGGER` env var)
+- `/instrument-agent` slash command wires it in
+- `/setup-agent-replay` scaffolds an HTTP endpoint that replays a production trace against your real agent code — invaluable for fixing a manuscript-pipeline regression without rerunning the entire 11-phase orchestrator
+
+**For our setup specifically**:
+- During SETUP phase: frontier LLM (Claude Code etc) uses Raindrop for self-healing eval loops on skill installation
+- During DAILY use post-air-gap: Hermes Agent points at Raindrop on `localhost:5899` (if compatible) — every research session is replay-able for KVKK audit
+- For colleagues: even if they don't open the UI, Raindrop running in the background creates the trace database that an auditor or post-mortem reviewer can later inspect
+
+**Configuration env vars** (set during Phase 0 of setup):
+```
+RAINDROP_WORKSHOP_PORT=5899
+RAINDROP_WORKSHOP_DB_PATH=~/.raindrop/raindrop_workshop.db
+RAINDROP_LOCAL_DEBUGGER=http://localhost:5899
+```
 
 ---
 
@@ -89,6 +125,10 @@ The eval framework Anthropic, DeepMind, and the UK AI Safety Institute use for t
 If you ever want to say *"my agent passes safety checks"* out loud, the check has to come from a framework someone else can re-run. **This is that framework.**
 
 *For our air-gapped medical-research context: build `inspect-ai` tasks for each skill. e.g., `evidence-synthesize` eval = 10 paper-summaries + a question, scored on citation accuracy + claim coverage. Run before any skill change. Commit the pass-rate to git per #3 above.*
+
+**Relationship to Raindrop Workshop (#4b)**: inspect-ai runs offline batched evals across model/skill changes. Raindrop is in-the-loop tracing as agents actually run. Both are needed:
+- Use `inspect-ai` when you say "I want to know if my new `analysis-plan` skill is better than the old one across 50 test cases."
+- Use Raindrop when you say "my agent just did something weird in real-time; show me why."
 
 ---
 

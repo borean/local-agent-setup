@@ -2,7 +2,8 @@
 name: zero-tech-debt
 description: Rework a change as if the intended UX and architecture existed from day one, deleting compatibility cruft and accidental complexity.
 user-invocable: true
-pillar: meta
+domain: coding
+sub-category: bora
 target_models:
   primary: qwen3.6:27b-q4_K_M
   fallback: qwen3.6:35b-a3b-q4_K_M

@@ -85,15 +85,22 @@ local-agent-setup/
 │   ├── zero-tech-debt.md
 │   └── ...
 │
-├── skills/                ← the 43-skill medical research bundle
-│   ├── meta/              ← session-launch, material-passport, output-scrub, etc.
-│   ├── literature/        ← leann-search, paperqa-*, storm-*, etc.
-│   ├── statistics/        ← data-dictionary, analysis-plan, table-one, etc.
-│   ├── manuscript/        ← outline, draft, claim-check, anti-leakage, etc.
-│   ├── visualization/     ← chart-spec, forest-plot, km-curve, etc.
-│   ├── medical-domain/    ← pediatric-references, dosing, etc.
-│   ├── peer-review/       ← rob-assessor, grade-evidence, devils-advocate, etc.
-│   └── coding/            ← cherry-picks from addyosmani/mattpocock/vercel
+├── skills/                ← three independent bundles
+│   ├── shared/            ← 6 cross-cutting (session-launch, material-passport, output-scrub, audit, network-toggle, request-internet)
+│   ├── research/          ← 37 clinical/academic research skills, 6 sub-pillars
+│   │   ├── literature/    ← leann-search, paperqa-*, storm-*, grill-with-docs
+│   │   ├── statistics/    ← data-dictionary, analysis-plan, table-one-build, ...
+│   │   ├── manuscript/    ← outline, draft, claim-check, anti-leakage, style-calibration, ...
+│   │   ├── visualization/ ← chart-spec, nature-figure, forest-plot, color-palette, ...
+│   │   ├── medical-domain/← pediatric-references, dosing, tr-medical-translate
+│   │   └── peer-review/   ← rob-assessor, grade-evidence, devils-advocate, 7-mode-failure
+│   └── coding/            ← 21 engineering skills cherry-picked + custom
+│       ├── karpathy/      ← 12-rule-derived
+│       ├── google/        ← 11 from addyosmani/agent-skills
+│       ├── mattpocock/    ← 4 from mattpocock/skills/engineering
+│       ├── vercel/        ← 1 from vercel-labs/agent-skills
+│       ├── shadcn/        ← shadcn CLI v4
+│       └── bora/          ← zero-tech-debt + custom additions
 │
 ├── hooks/                 ← event-driven shell scripts
 │   ├── session-start-airgap.sh
