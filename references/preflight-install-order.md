@@ -1,4 +1,32 @@
-# Pre-flight Install Order — the 5 Things to Lock Before Any Agentic Project
+# Pre-flight Install Order — Tiered
+
+**Originally** the 5-step preflight from Karpathy (@DeRonin_, May 2026). For an **air-gapped medical research** use case where there are no API keys to manage and no remote providers to route, several of the original tools are redundant. Tiering them.
+
+## Tiers
+
+| Tier | Tools | Justification |
+|---|---|---|
+| **MANDATORY** | uv, pipx, llama.cpp, Raindrop Workshop | Cannot run the stack without these |
+| **RECOMMENDED** | mitmproxy (HTTP-level audit) — but optional if you trust Raindrop Workshop alone | Defense-in-depth for KVKK Art. 12 audit; Raindrop covers semantic spans, mitmproxy covers raw HTTP |
+| **DEFERRED** | inspect-ai | Eval framework. Install when you actually need to write evals (week 2+, not day 1) |
+| **OPTIONAL** | direnv + 1Password CLI / doppler | Only needed if you do cross-project secret work outside air-gap. Default: skip |
+| **DROPPED** | litellm | Redundant for our case: no providers to route (single local model), no budget caps (local = free), audit covered by hooks + Raindrop |
+
+The original Karpathy 5-step assumes cloud-API agent development. Our case is the opposite — local-only, single-model. The tools that mattered against $4k cloud bills and prompt-injection leaks via remote search tools don't apply.
+
+What *does* apply:
+- Visibility (Raindrop Workshop) ✓
+- Context (`uv` + git commit on eval pass) ✓
+- Lessons file (`~/.research/lessons.md`) ✓
+
+What we drop or defer:
+- Privacy via remote-secret rotation (no remote secrets here)
+- Token proxy for cloud rate-limit fallback (no cloud providers)
+- HTTP-layer wiretap to catch prompt-injection from web data (no web data in air-gap)
+
+---
+
+# Original 5-step (for reference + cherry-pick)
 
 **Source**: Karpathy (per @DeRonin_ thread, May 2026): *"anybody who uses or learns agentic systems, SHOULD READ THIS — the install order I run before any new agentic project."*
 

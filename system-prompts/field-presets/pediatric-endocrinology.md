@@ -51,17 +51,34 @@
 
 ---
 
-## Length limits (target_journal aware)
+## Length limits — DO NOT hardcode; consult the journal-guidelines cache
 
-| Journal | Abstract | Main text | Refs | Figures | Tables |
+Journal author guidelines **drift**. Hardcoding length limits in this preset would rot. Instead, every skill that needs a length limit (`outline-build`, `abstract-format`, `draft-write`) reads from the local cache at `~/Research/cache/journal-guidelines/{slug}.yaml`.
+
+**Consultation pattern**:
+
+```yaml
+# In a skill's procedure:
+1. Read ~/Research/cache/journal-guidelines/{slug}.yaml
+2. If file missing OR fetched_at > 30 days ago:
+   - Invoke shared/07-online-lookup --target=journal-guidelines --target-args='{"journal": "{slug}"}'
+   - The lookup happens in a CLEAN SESSION (no PHI exposure during the brief online lift)
+   - Result is cached
+   - Original session resumes via passport
+3. Use cached `abstract.word_limit`, `main_text.word_limit`, `figures.max_count`, etc.
+```
+
+**Rough current ranges** (verify by lookup before submission):
+
+| Journal | Abstract words | Main words | Refs | Figs | Tables |
 |---|---|---|---|---|---|
-| JCEM | 250 | 3000 | 50 | 5 | 5 |
-| JPEM | 250 | 3500 | 50 | 6 | 6 |
-| Diabetes Care | 250 | 4000 | 40 | 6 | 6 |
-| Frontiers Endocrinology | 350 | 12000 | 100 | unlimited | unlimited |
-| Lancet Diabetes & Endocrinology | 200 | 3500 | 30 | 4 | 3 |
+| JCEM | ~250 | ~3000 | ~50 | ~5 | ~5 |
+| JPEM | ~250 | ~3500 | ~50 | ~6 | ~6 |
+| Diabetes Care | ~250 | ~4000 | ~40 | ~6 | ~6 |
+| Frontiers Endocrinology | ~350 | ~12000 | ~100 | many | many |
+| Lancet D&E | ~200 | ~3500 | ~30 | ~4 | ~3 |
 
-When `target_journal` is specified, all drafted sections respect that journal's limits.
+These ranges are rough guidance ONLY. Skills that use them without first invoking `online-lookup` (or confirming the cache is <30 days fresh) should be flagged as a `seven-mode-failure-check` violation (mode 5: citation/reference drift).
 
 ---
 

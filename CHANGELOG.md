@@ -1,5 +1,78 @@
 # Changelog
 
+## [0.6.0] — 2026-05-18 — Preflight rationalized, MLX/GGUF choice, clean-session online lookup, setup scripts, Little Snitch profile, 3 stub field presets
+
+### Rationalized — preflight tools
+
+User asked: "why are these needed?" Honest audit dropped/deferred several tools that don't fit air-gap use:
+
+- `references/preflight-install-order.md` now tiered:
+  - **MANDATORY**: uv, pipx, llama.cpp, Raindrop Workshop
+  - **RECOMMENDED**: mitmproxy (HTTP-level audit; Raindrop covers semantic spans — pick one)
+  - **DEFERRED**: inspect-ai (install when user writes evals, not day 1)
+  - **OPTIONAL**: direnv + 1Password CLI/doppler (only if user does cross-project secret work outside air-gap)
+  - **DROPPED**: litellm (redundant — no providers to route, no budget caps for local model, audit covered by hooks + Raindrop)
+- `SETUP_PROMPT.md` Phase 0 rewritten to match the new tiering; env vars control opt-ins
+
+### Added — MLX vs GGUF device detection
+
+`SETUP_PROMPT.md` Phase 1 now detects M-series chip and asks:
+- **GGUF (default)**: universal, ~50 tok/s for Qwen 3.6 35B-A3B Q4_K_M on M3 Max, portable to Linux/Windows colleagues
+- **MLX (opt-in)**: Apple Silicon only, ~80 tok/s (~60% faster), but can't share install instructions with non-Mac colleagues
+- Per-user choice; default keeps colleagues portable
+
+### Added — clean-session online-lookup pattern
+
+User flagged: "lifting air-gap while patient data is in context is a leak risk; do journal lookups in a clean session."
+
+- New skill: `skills/shared/07-online-lookup/SKILL.md`
+- Two-phase pattern:
+  - **Phase A** (current session with PHI): emit Material Passport, halt, tell user to open fresh Hermes window
+  - **Phase B** (new clean session): defensive check (verify no PHI in context), invoke `request-momentary-internet`, fetch, cache to `~/Research/cache/{slug}.yaml`, tell user to resume original session via passport
+- Schemas defined for: journal-guidelines, reporting-checklist, package-version, public-dataset
+- Cache refresh policy: journal guidelines monthly, reporting checklists quarterly, package versions on-demand
+
+### Changed — peds-endo preset: removed hardcoded length limits
+
+Per user feedback, length limits in `pediatric-endocrinology.md` were rotting bait. Replaced with:
+- **Cache-consult pattern**: skills read `~/Research/cache/journal-guidelines/{slug}.yaml`; if missing or >30 days old, invoke `online-lookup` skill
+- Rough current ranges kept as fallback guidance, explicitly labeled stale-risk
+- `seven-mode-failure-check` mode 5 (citation drift) now applies to using hardcoded limits without cache refresh
+
+### Added — 4 setup scripts
+
+- `scripts/install-cron.sh` — installs a cron task as launchctl plist (daily-03 or weekly-sun-04); randomizes minute within window to spread load
+- `scripts/pin-cherry-picks.sh` — fetches upstream cherry-picks (addyosmani, mattpocock, vercel-labs, shadcn-ui) at resolved-from-main SHAs, writes pinned-commit to frontmatter
+- `scripts/download-guidelines.sh` — best-effort scaffold for MAGICapp/ISPAD/ESPE/ÇEDD/AAP/ATA caches (most societies don't have stable open APIs; falls back to manual fetch instructions)
+- `scripts/download-references.sh` — WHO + CDC growth chart fetchers (open URLs); Neyzi + IAP pointer files (manual fetch — not openly available)
+
+### Added — Little Snitch profile
+
+`setup-prompts/little-snitch-research-mode.lsrules` — strict localhost-only egress:
+- Allow 127.0.0.0/8 + ::1/128
+- Explicit deny for major leak vectors (.anthropic.com, .openai.com, .googleapis.com, .azure.com, .icloud.com, .apple.com, .zotero.org, .dropbox.com, .huggingface.co, .pythonhosted.org, .github.com)
+- Default-deny 0.0.0.0/0 + ::/0 catch-all
+- Import via Little Snitch Configuration → File → Import Rules
+
+### Added — 3 stub field presets
+
+For users not in pediatric endocrinology:
+- `system-prompts/field-presets/oncology.md` (skeleton: AMA citation, RECIST/iRECIST, CTCAE v5.0, KM+Cox, ~5-7 hedges/1000w)
+- `system-prompts/field-presets/internal-medicine.md` (skeleton: NEJM structured abstract, propensity scores, ~1.5:1 active:passive)
+- `system-prompts/field-presets/surgery.md` (skeleton: Annals of Surgery style, Clavien-Dindo, present-tense operative descriptions, ~3-5 hedges/1000w)
+
+Each is a stub awaiting first-use population. PRs welcome.
+
+### Open
+
+- Bridge smoke test: still pending real installation
+- Field presets above are stubs; full population per real submission needs
+- US-specific peds-endo variant (vs European default)
+- ÇEDD/ISPAD/ESPE programmatic guideline fetchers (most are manual today)
+- Neyzi 2015 LMS transcription (Bora's existing ceddcozum auxology tool has the data — could export to CSV)
+
+---
+
 ## [0.5.0] — 2026-05-18 — Setup prompt + lockfiles + field preset + Hermes-Raindrop bridge
 
 ### Added — the pasteable SETUP_PROMPT

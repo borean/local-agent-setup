@@ -74,44 +74,49 @@ After this block, commit each answer to `~/.research/setup-answers.yaml` for aud
 
 ---
 
-## PHASE 0 — PRE-FLIGHT INFRASTRUCTURE (~15 min)
+## PHASE 0 — PRE-FLIGHT INFRASTRUCTURE (~5-15 min depending on tier choices)
 
-Per `references/preflight-install-order.md`:
+**Tiered**, per `references/preflight-install-order.md`. Air-gapped medical research has no API keys to manage and no providers to route, so we install only what's strictly useful.
 
 ```bash
-# Homebrew check (install if missing)
+# Homebrew check
 which brew >/dev/null || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Direnv + 1Password CLI (or doppler fallback)
-brew install direnv
-brew install --cask 1password-cli || brew install doppler/cli/doppler
-# Wire direnv into shell
-grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-
-# mitmproxy
-brew install mitmproxy
-
-# uv (Astral)
-brew install uv
-
-# pipx
-brew install pipx
+# ─── MANDATORY ─────────────────────────────────────────────────────────
+brew install uv pipx
 pipx ensurepath
 
-# inspect-ai
-pipx install inspect-ai
-
-# litellm as local proxy
-uv tool install litellm
-
-# Raindrop Workshop (Ben Hylak's local agent debugger)
+# Raindrop Workshop (local-first agent debugger by Ben Hylak)
 curl -fsSL https://raindrop.sh/install | bash
 
-# Initialize lessons file
+# Lessons file
 mkdir -p ~/.research && touch ~/.research/lessons.md
 
+# ─── RECOMMENDED (skip if you trust Raindrop alone) ────────────────────
+if [ "${INSTALL_MITMPROXY:-yes}" = "yes" ]; then
+    brew install mitmproxy
+    # mitmproxy is for HTTP-level audit of localhost:11434.
+    # Raindrop covers semantic spans. mitmproxy gives belt-and-suspenders for KVKK Art. 12.
+fi
+
+# ─── OPTIONAL (only if user has secrets they manage across projects) ──
+if [ "${INSTALL_SECRETS_MANAGER:-no}" = "yes" ]; then
+    brew install direnv
+    brew install --cask 1password-cli || brew install doppler/cli/doppler
+    grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+fi
+
+# ─── DEFERRED (install when user writes their first eval) ──────────────
+# pipx install inspect-ai
+# Ask the user before installing if they're going to write evals soon.
+
+# ─── DROPPED (redundant for our use case) ──────────────────────────────
+# litellm — we have no providers to route and no budget caps to enforce.
+#           Audit is covered by hooks + Raindrop. Skip.
+
 # Verification
-direnv --version && mitmproxy --version && uv --version && inspect --version
+uv --version && which pipx && raindrop --version || \
+    echo "WARN: Raindrop CLI not found; check ~/.local/bin in PATH"
 ```
 
 Log to `~/.research/lessons.md` any package that failed and how you worked around it.
@@ -120,11 +125,46 @@ Log to `~/.research/lessons.md` any package that failed and how you worked aroun
 
 ## PHASE 1 — INFERENCE LAYER (~30 min, mostly download time)
 
+**Format choice — ask the user**:
+
 ```bash
+# Detect device
+CHIP=$(system_profiler SPHardwareDataType | grep "Chip:" | awk '{print $2}')
+RAM_GB=$(($(sysctl -n hw.memsize) / 1024 / 1024 / 1024))
+echo "Device: $CHIP, $RAM_GB GB"
+
+# Default: GGUF via llama.cpp (universal — Apple Metal, Linux CUDA, Windows)
+# Opt-in: MLX (Apple Silicon only, ~20-87% faster but Apple-bound)
+INFERENCE_FORMAT="${INFERENCE_FORMAT:-gguf}"  # gguf | mlx
+if [[ "$CHIP" == *"M3"* || "$CHIP" == *"M4"* ]]; then
+    cat <<EOF
+M-series Mac detected ($CHIP). You have two options:
+
+  [gguf] llama.cpp + GGUF format
+         Universal (works on Linux/Windows too — colleagues stay portable)
+         ~50 tok/s for Qwen 3.6 35B-A3B Q4_K_M on M3 Max
+         Default. Pick this unless you specifically want max throughput.
+
+  [mlx]  Apple MLX format + mlx-lm server
+         Apple Silicon only
+         ~80 tok/s for Qwen 3.6 35B-A3B 4-bit on M3 Max (~60% faster than GGUF)
+         Trade: cannot share install instructions with non-Mac colleagues
+         Use only if max throughput matters more than portability
+
+Choose [gguf/mlx]:
+EOF
+    read -r INFERENCE_FORMAT
+fi
+
 mkdir -p ~/.research/{models,logs,services}
 
-# llama.cpp Metal-built
-brew install llama.cpp
+# Install runtime
+if [ "$INFERENCE_FORMAT" = "mlx" ]; then
+    pipx install mlx-lm
+    pipx install mlx-vlm   # for vision support
+else
+    brew install llama.cpp
+fi
 
 # Download GGUFs (in parallel where possible — wget in background)
 huggingface-cli download \

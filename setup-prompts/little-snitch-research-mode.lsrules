@@ -1,0 +1,112 @@
+{
+  "description" : "Research Mode — strict localhost-only egress for air-gapped medical research. Blocks all outbound traffic except loopback. Allow Setup Mode briefly via 'request-momentary-internet' skill for cache refreshes.",
+  "name" : "Research Mode",
+  "rules" : [
+    {
+      "action" : "allow",
+      "process" : "ANY",
+      "remote-addresses" : "127.0.0.0/8",
+      "direction" : "outgoing",
+      "notes" : "IPv4 loopback — llama-server + Raindrop Workshop + Hermes endpoints"
+    },
+    {
+      "action" : "allow",
+      "process" : "ANY",
+      "remote-addresses" : "::1/128",
+      "direction" : "outgoing",
+      "notes" : "IPv6 loopback"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".anthropic.com",
+      "notes" : "Block Claude Code telemetry"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".openai.com",
+      "notes" : "Block any OpenAI client phone-home"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".googleapis.com",
+      "notes" : "Block Gemini / Google Cloud API"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".azure.com",
+      "notes" : "Block Azure (incl. Azure OpenAI)"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".icloud.com",
+      "notes" : "Block iCloud sync"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".apple.com",
+      "notes" : "Block Apple update checks + Spotlight suggestions"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".zotero.org",
+      "notes" : "Block Zotero sync (keep files local)"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".dropbox.com",
+      "notes" : "Block Dropbox sync"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".huggingface.co",
+      "notes" : "Block HuggingFace (models are pre-downloaded; no live fetches)"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".pythonhosted.org",
+      "notes" : "Block pip/pypi (use wheelhouse fallback)"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-domains" : ".github.com",
+      "notes" : "Block GitHub during clinical work; allow only during brief Setup Mode lifts"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-addresses" : "0.0.0.0/0",
+      "notes" : "Default-deny for IPv4 (catch anything not specifically denied above)"
+    },
+    {
+      "action" : "deny",
+      "process" : "ANY",
+      "direction" : "outgoing",
+      "remote-addresses" : "::/0",
+      "notes" : "Default-deny for IPv6"
+    }
+  ],
+  "version" : "1.0.0"
+}
