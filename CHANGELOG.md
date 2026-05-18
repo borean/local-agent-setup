@@ -1,5 +1,77 @@
 # Changelog
 
+## [0.3.0] — 2026-05-18 — Bulk skill+hook+cron implementation
+
+### Added — meta/reference files
+
+- `CREDITS.md` — comprehensive credit list for every idea, library, tweet author, and pattern used
+- `references/compliance-primer.md` — KVKK Art. 6/12/35, GDPR Art. 9/32/35/89, HIPAA explained
+- `references/devils-advocate-explained.md` — plain-language explainer of the two-phase pattern
+- `references/data-viz-upgrade-PR.md` — PR-style spec for upgrading Bora's existing data-viz skill (OKLCH + Wong + Emil + nature-figure + tabular-nums + figure-validate)
+
+### Added — skills
+
+- **6 shared/ skills full SKILL.md**: session-launch, material-passport-emit, material-passport-resume, output-scrub, network-mode-toggle, request-momentary-internet
+- **40 research/ skills** (in 6 sub-pillars):
+  - literature (7): leann-search, paperqa-summarize, paperqa-synthesize, paperqa-verify-citation, storm-systematic-review, guideline-cache-query, grill-with-docs
+  - statistics (7): data-dictionary, statistical-test-picker, power-analysis, analysis-plan, analysis-run, result-interpret, table-one-build
+  - manuscript (10): outline-build, draft-write, claim-check, anti-leakage, writing-quality-check, style-calibration (now generic per-user), score-trajectory, prisma-trAIce-disclosure, response-to-reviewer, abstract-format
+  - visualization (10): chart-spec, nature-figure, forest-plot, km-curve, patient-flow-sankey, color-palette, figure-validate + 3 vercel-labs cherry-picks (react-best-practices, react-view-transitions, web-design-guidelines)
+  - medical-domain (4): pediatric-references, dosing-converter, guideline-snapshot, tr-medical-translate
+  - peer-review (5): rob-assessor, grade-evidence, devils-advocate, seven-mode-failure-check, peer-review-checklist
+- **21 coding/ skills**:
+  - karpathy/ (3 full): fail-loud, surgical-changes, read-before-write
+  - google/ (11 stubs + BORA-NOTES): from addyosmani/agent-skills
+  - mattpocock/ (4 stubs + BORA-NOTES)
+  - vercel/ (1 stub + BORA-NOTES): composition-patterns (the 3 visualization ones moved to research/visualization)
+  - shadcn/ (1 stub + BORA-NOTES)
+  - bora/ (2 full): zero-tech-debt, clawpatch-wrapper
+
+### Added — hooks (10 shell scripts)
+
+- `session-start-airgap.sh` — verify air-gap, load voice profile, show resumable passport
+- `session-end-passport.sh` — emit Material Passport, write meta.yaml
+- `precompact-passport-emit.sh` — force passport before compaction
+- `user-prompt-phi-warn.sh` — regex scan prompts for PHI; warn
+- `pre-tool-network-deny.sh` — HARD BLOCK network tools in air-gap
+- `post-tool-audit-jsonl.sh` — append every tool call to today's ledger
+- `stop-output-scrub.sh` — auto-scrub last assistant turn before copy
+- `stop-score-trajectory.sh` — if manuscript edited, snapshot for regression detection
+- `skill-suggest-airgap.sh` — keyword routing filtered to airgap-ok skills
+- `checkpoint-reminder.sh` — soft passport reminder every 20 tool calls
+- `notchi-hook.sh` — air-gap-safe desktop notifier (kept Bora's existing)
+
+### Added — cron tasks (7 SKILL.md files)
+
+**Daily (launchctl 03:00-03:45):**
+- airgap-nightly-handoff
+- llama-server-health
+- audit-rotate (with SHA-256 hash chain for KVKK tamper-evidence)
+- leann-index-refresh
+
+**Weekly (Sunday 04:00-05:00):**
+- manuscript-snapshot (cap 12 per manuscript)
+- passport-cleanup (delete >30d, keep hash index)
+- skill-usage-report (which skills used/idle/prune candidates)
+
+### Refinements
+
+- **TOON dropped** (Bora flagged "proved bad in past") — JSON Schema for all skill I/O
+- **`style-calibration` made generic** — user provides their own 3-5 papers at setup, not Bora-mandated
+- **clawpatch added** as `coding/bora/clawpatch-wrapper`
+- **Hermes self-evolving skills: embrace day 1** (per Bora's call)
+- **Credit-in-place doctrine** — every SKILL.md has `## Credit` section; CREDITS.md aggregates all attributions
+
+### Open
+
+- BORA-NOTES.md per cherry-picked skill is a stub waiting for first-use population
+- Setup prompt still outline; expand to pasteable next iteration
+- Hermes-Raindrop compat: not yet verified; will test post-install
+- `medical-research-venv.lock` + `renv.lock` files not yet generated
+- The pasteable SETUP_PROMPT version
+
+---
+
 ## [0.2.0] — 2026-05-18 — Skills restructure + Raindrop Workshop
 
 ### Restructured
