@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.9.6] — 2026-05-19 — Disk-space pre-check + MLX repo name fix
+
+Final pre-install 4-way audit (Claude / Grok / Cursor / ChatGPT) caught two real bugs after v0.9.5 already addressed most signals. Claude + Grok were reading stale snapshots (pre-v0.9.5), so their flags about "missing skill files" and "8-question pre-flight with Hermes Desktop" don't apply. Cursor + ChatGPT each surfaced one real issue.
+
+### Fixed — MLX repo names follow mlx-community convention
+
+ChatGPT caught: Phase 1 downloads `mlx-community/Qwen3.6-35B-A3B-4bit-MLX` and `mlx-community/Qwen3.6-27B-4bit-MLX`, but the mlx-community convention is `{name}-4bit` without a `-MLX` suffix (the org name already implies MLX). The verify-search command later in the same Phase 1 already used the correct `-4bit` form — internal inconsistency that would have 404'd on download.
+
+Fixed:
+- `mlx-community/Qwen3.6-35B-A3B-4bit-MLX` → `mlx-community/Qwen3.6-35B-A3B-4bit`
+- `mlx-community/Qwen3.6-27B-4bit-MLX` → `mlx-community/Qwen3.6-27B-4bit`
+- Reference prose in the "if a 404 hits, search HuggingFace" section also corrected (was citing the wrong-suffix name as the canonical).
+
+Local-dir naming (`Qwen3.6-35B-A3B-MLX-4bit`) is unchanged — that's a folder name on disk, not the HF repo name.
+
+### Added — disk-space pre-check
+
+Cursor caught: real machines often have <80 GB free. Bora's M3 Max showed ~48 GB free / 98% full, but Phase 1 would have blindly started a ~35 GB Qwen download and run out mid-stream. PRE-CHECK now reads `df -k $HOME` before any download and applies a three-tier policy:
+
+- **≥80 GB free**: silent pass, full install proceeds.
+- **30–80 GB free**: warn, ask user to choose: `(a)` stop and free disk / `(b)` Phase A path (Qwen 27B dense only, ~30 GB total, sets `$INSTALL_MODE=phase-a`) / `(c)` override.
+- **<30 GB free**: hard warn (even Phase A is risky), options `(a)` stop / `(b)` override.
+
+PRE-CHECK section renamed from "port collision + clone-path env var" → "disk space + port collision + clone-path env var + existing assets". Existing-section steps renumbered (port = #2, env var = #3, existing-assets = #4).
+
+### Added — Phase A install mode honored by Phase 1
+
+When PRE-CHECK sets `$INSTALL_MODE=phase-a` (disk between 30–80 GB and user picked option b), Phase 1 now automatically skips:
+- Qwen 3.6 35B-A3B download (~20 GB)
+- LFM2.5 router download (~500 MB but useless with one Qwen)
+- Turkish-Gemma download (~5 GB)
+
+Only Qwen 3.6 27B dense (~16 GB) downloads, matching the `references/phase-a-smoke-test.md` minimal path. Result: full Phase 0–10 still runs end-to-end; user gets a working spine smoke test instead of a half-aborted full install.
+
+### Triage of stale audit signals (not actionable)
+
+- **Claude** claimed "43 SKILL.md files don't yet exist" — reading pre-v0.3.0 status. We've had 74 SKILL.md, 11 hooks, 7 cron, and the 4 helper scripts since v0.3.0–v0.9.4.
+- **Grok** walked the user through the old 8-question PRE-FLIGHT with "Hermes Agent Desktop as daily-use GUI" — reading pre-v0.9.5. Q&A expanded to 10 questions in v0.9.5 and Hermes wording corrected to "TUI today, Desktop later".
+
+These two reviewers appear to have been pointed at cached / pre-bump snapshots. Worth knowing for future audits — confirm the reviewer is reading current `main` before treating their findings as new.
+
+### Open (carried)
+
+- Real-machine install validation: Phase A smoke test (1-2 h, now natively supported by `$INSTALL_MODE=phase-a`) recommended before full Phase 0-10.
+- Linux + Windows full setup walk-throughs (deferred).
+- Field preset population for non-peds-endo fields (stubs in `references/field-preset-examples/`).
+- Hermes-Raindrop OTLP bridge smoke test (untested).
+- Public release post real-install validation.
+
+---
+
 ## [0.9.5] — 2026-05-19 — Existing-assets audit + headless wording sweep
 
 Two converged review findings: (1) every external auditor flagged that the repo assumes a greenfield Mac and would blindly redownload 35–64 GB of models the user may already have; (2) the repo carried personal wording (`bora` paths, "Bora's adaptation", "Turkish pediatric endocrinologist" persona) that's noise for non-author users. Both addressed in this release.

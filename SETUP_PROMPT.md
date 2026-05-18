@@ -94,12 +94,43 @@ After this block, commit each answer to `~/.research/setup-answers.yaml` for aud
 
 ---
 
-## PRE-CHECK — port collision + clone-path env var
+## PRE-CHECK — disk space + port collision + clone-path env var + existing assets
 
-Before Phase 0, two quick checks to avoid downstream pain:
+Before Phase 0, four quick checks to avoid downstream pain:
 
 ```bash
-# 1. Port 11434 collision check
+# 1. Disk space — full install needs ~64-80 GB free (both Qwen + LFM + venv + R + LEANN).
+# Catch this BEFORE Phase 1 starts a 35 GB download into a near-full disk.
+FREE_KB=$(df -k "$HOME" | awk 'NR==2 {print $4}')
+FREE_GB=$((FREE_KB / 1024 / 1024))
+echo "ℹ️ Free disk on $HOME's volume: ${FREE_GB} GB"
+if [ "$FREE_GB" -lt 30 ]; then
+    echo "⚠️ Below 30 GB free. Even Phase A spine smoke test (~16 GB for one Qwen) is risky."
+    echo "Options:"
+    echo "  (a) Stop now, free disk, re-run PRE-CHECK. Recommended."
+    echo "  (b) Override and proceed — install may fail mid-download."
+    read -p "Pick a (stop) or b (override): " disk_choice
+    case "$disk_choice" in
+        b) echo "⚠️ Proceeding despite low disk — failures will be noisy, log them to lessons.md" ;;
+        *) echo "Stopping. Free ~50 GB and re-run."; exit 1 ;;
+    esac
+elif [ "$FREE_GB" -lt 80 ]; then
+    echo "⚠️ Below 80 GB free. Full install (both Qwen models + Turkish-Gemma + venv + R + LEANN) won't fit."
+    echo "Options:"
+    echo "  (a) Stop, free more disk to 80+ GB. Recommended for full Phase 0-10."
+    echo "  (b) Phase A path — one Qwen model only (~30 GB total). Defers second model + Turkish-Gemma."
+    echo "  (c) Override and proceed full install — may run out mid-download."
+    read -p "Pick a (stop), b (Phase A), c (override): " disk_choice
+    case "$disk_choice" in
+        b) export INSTALL_MODE=phase-a ; echo "✓ Will install Qwen 27B dense only; defer second model + Turkish-Gemma" ;;
+        c) echo "⚠️ Proceeding full install with marginal disk — be ready to abort if downloads stall" ;;
+        *) echo "Stopping. Free disk and re-run."; exit 1 ;;
+    esac
+else
+    echo "✓ Disk OK (≥80 GB free)"
+fi
+
+# 2. Port 11434 collision check
 # Ollama uses :11434 by default. If user has Ollama running, decide:
 #   (a) stop Ollama (preferred — single inference backend)
 #   (b) remap our llama-server to :11444 (skill defaults work; downstream needs update)
@@ -124,7 +155,7 @@ fi
 LLAMA_PORT=${LLAMA_PORT:-11434}
 LFM_PORT=${LFM_PORT:-11436}
 
-# 2. LOCAL_AGENT_SETUP env var — the repo location
+# 3. LOCAL_AGENT_SETUP env var — the repo location
 # Don't hardcode ~/local-agent-setup; let user clone anywhere
 if [ -z "${LOCAL_AGENT_SETUP:-}" ]; then
     # Try common locations
@@ -143,7 +174,7 @@ if [ -z "${LOCAL_AGENT_SETUP:-}" ]; then
     fi
 fi
 
-# 3. Existing-assets audit — don't re-download things the user already has
+# 4. Existing-assets audit — don't re-download things the user already has
 # Power-user Macs often have Ollama, LM Studio, an existing Hermes config, an
 # existing ~/.agents/skills/ tree, a populated HF cache, etc. Catalog them so
 # Phases 1/2/5/7 can offer reuse instead of blind overwrite.
@@ -366,48 +397,63 @@ if [ "${REUSE_EXISTING_MODELS:-false}" = "true" ]; then
 fi
 
 # Install runtime
+# $INSTALL_MODE=phase-a (from PRE-CHECK disk warning, opt-in) → minimal: Qwen 27B dense only,
+# skip Qwen 35B-A3B + LFM router + Turkish-Gemma. Matches references/phase-a-smoke-test.md.
+PHASE_A=${INSTALL_MODE:-full}
+[ "$PHASE_A" = "phase-a" ] && echo "ℹ️ Phase A install mode — downloading Qwen 27B dense only (skip 35B-A3B + LFM + Turkish-Gemma)"
+
 if [ "${SKIP_MODEL_DOWNLOAD:-false}" = "true" ]; then
     echo "⏭ Skipping Phase 1 downloads per user choice."
 elif [ "$INFERENCE_FORMAT" = "mlx" ]; then
     pipx install mlx-lm
     pipx install mlx-vlm   # for vision support (Qwen 3.6 35B-A3B has vision)
 
-    # Download MLX-converted models
-    huggingface-cli download \
-        mlx-community/Qwen3.6-35B-A3B-4bit-MLX \
-        --local-dir ~/.research/models/Qwen3.6-35B-A3B-MLX-4bit &
+    # Download MLX-converted models — mlx-community convention is `{name}-4bit` (no -MLX suffix)
+    if [ "$PHASE_A" != "phase-a" ]; then
+        huggingface-cli download \
+            mlx-community/Qwen3.6-35B-A3B-4bit \
+            --local-dir ~/.research/models/Qwen3.6-35B-A3B-MLX-4bit &
+    fi
 
     huggingface-cli download \
-        mlx-community/Qwen3.6-27B-4bit-MLX \
+        mlx-community/Qwen3.6-27B-4bit \
         --local-dir ~/.research/models/Qwen3.6-27B-MLX-4bit &
 
-    # LFM2.5 + Turkish-Gemma may not yet have MLX variants; fall back to GGUF for these:
-    huggingface-cli download \
-        LiquidAI/LFM2.5-350M-GGUF \
-        LFM2.5-350M-Q8_0.gguf \
-        --local-dir ~/.research/models &
+    # LFM2.5 router — only needed when both Qwen variants are loaded for session routing.
+    # Phase A loads one Qwen, so the router is dead weight.
+    if [ "$PHASE_A" != "phase-a" ]; then
+        huggingface-cli download \
+            LiquidAI/LFM2.5-350M-GGUF \
+            LFM2.5-350M-Q8_0.gguf \
+            --local-dir ~/.research/models &
+    fi
 else
     brew install llama.cpp
 
-    huggingface-cli download \
-        unsloth/Qwen3.6-35B-A3B-GGUF \
-        Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \
-        --local-dir ~/.research/models &
+    if [ "$PHASE_A" != "phase-a" ]; then
+        huggingface-cli download \
+            unsloth/Qwen3.6-35B-A3B-GGUF \
+            Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \
+            --local-dir ~/.research/models &
+    fi
 
     huggingface-cli download \
         unsloth/Qwen3.6-27B-GGUF \
         Qwen3.6-27B-Q4_K_M.gguf \
         --local-dir ~/.research/models &
 
-    huggingface-cli download \
-        LiquidAI/LFM2.5-350M-GGUF \
-        LFM2.5-350M-Q8_0.gguf \
-        --local-dir ~/.research/models &
+    if [ "$PHASE_A" != "phase-a" ]; then
+        huggingface-cli download \
+            LiquidAI/LFM2.5-350M-GGUF \
+            LFM2.5-350M-Q8_0.gguf \
+            --local-dir ~/.research/models &
+    fi
 fi
 
 # Optional Turkish model — always GGUF (LFM2.5 + Turkish-Gemma not yet in MLX format as of May 2026)
 # Triggered by language preference, not field, so non-medical Turkish writers also benefit.
-if [ "${LANG_HINT:-en}" = "tr" ]; then
+# Skipped in Phase A mode (smoke test corpus is usually English).
+if [ "${LANG_HINT:-en}" = "tr" ] && [ "$PHASE_A" != "phase-a" ]; then
     huggingface-cli download \
         ytu-ce-cosmos/Turkish-Gemma-9b-T1-GGUF \
         Turkish-Gemma-9b-T1-Q4_K_M.gguf \
@@ -428,7 +474,7 @@ huggingface-cli scan-cache  # what's already cached
 huggingface-cli download --revision=main mlx-community/Qwen3.6-35B-A3B-4bit --max-files=1
 ```
 
-The names in this prompt (`mlx-community/Qwen3.6-35B-A3B-4bit-MLX`, `LiquidAI/LFM2.5-350M-tool-use-GGUF`, etc.) reflect May 2026 best-guess. They may have been renamed since. If a 404 hits, **search HuggingFace**:
+The names in this prompt (`mlx-community/Qwen3.6-35B-A3B-4bit`, `LiquidAI/LFM2.5-350M-GGUF`, etc.) reflect May 2026 best-guess. They may have been renamed since. If a 404 hits, **search HuggingFace**:
 
 ```bash
 # Search HF for current canonical names before downloading
