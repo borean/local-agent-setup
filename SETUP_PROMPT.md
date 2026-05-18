@@ -723,7 +723,15 @@ chmod +x ~/Desktop/Hermes.command
 hermes --check  # should print: "Provider reachable: localhost:11434/v1 ✓"
 ```
 
-**Daily-use flow**: user double-clicks `~/Desktop/Hermes.command`. Terminal opens with Hermes TUI running. They never type a terminal command — they're inside Hermes immediately. When Hermes Desktop ships (Nous Research roadmap), swap the `.command` shortcut for the Desktop launcher.
+**Daily-use flow**: user double-clicks `~/Desktop/Hermes.command`. Terminal opens with Hermes TUI running. They never type a terminal command — they're inside Hermes immediately.
+
+**Why we stay on Hermes TUI today instead of pairing with another harness**:
+- Hermes Desktop is on the Nous Research roadmap (`desktop-pr20059-installers` tag); shipping soon
+- Re-adding OpenCode/Goose as parallel GUIs adds back the moat we cut in v0.4.0–v0.6.0
+- Ollama Desktop has a chat UI but no skills/hooks support — losing the whole point of this stack
+- Our harness layer is intentionally thin: `~/.hermes/config.yaml` + `Hermes.command` are ~5 lines total. When Desktop ships, the swap is replacing the `.command` shortcut with the native app launcher. Skills + hooks + audit don't change.
+
+**Bookmarked for re-evaluation when Hermes Desktop releases**: SETUP_PROMPT Phase 7 + the `Hermes.command` line. Everything else stays.
 
 ---
 

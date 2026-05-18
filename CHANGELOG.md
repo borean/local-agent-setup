@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.9.3] — 2026-05-19 — Cut moat from changelog + Phase A spine smoke test + Hermes strategy explicit
+
+### Removed — defensive "false positives" subsection in v0.9.2
+
+Per user: documenting "reviewer X was wrong about Y" is moat — defensive noise that crowds the changelog. Cut. Going forward: CHANGELOG records what changed, not what reviewers got wrong.
+
+### Added — `references/phase-a-smoke-test.md`
+
+Claude's spine-not-fat-skill reframe written up as a concrete 1-2-hour Phase A:
+
+- **4 minimum-viable-depth tests across the workflow loop**:
+  1. **Find**: 5 test PDFs → paperqa-summarize + paperqa-synthesize
+  2. **Analyze**: 20-row synthetic CSV → data-dictionary + table-one-build
+  3. **Write**: paragraph → draft-write + claim-check
+  4. **Audit (live wire)**: PHI-warn fires on deliberately PHI-shaped prompt, audit log accumulates, output-scrub catches a deliberately TC-kimlik-shaped number
+- **Setup-light path**: skip 8 of 10 phases. Just Qwen 27B dense (one model, ~16 GB), 8 skills, 5 hooks, Hermes CLI, PaperQA2-only Python deps. ~30 min install.
+- **A/B test embedded**: while you have 27B dense loaded, swap to 35B-A3B and compare prose coherence on the same paragraph. Decide our session-launch routing default.
+- **What you learn**: whether the architecture actually closes the loop before spending 2 hours on the full install
+- **What you skip**: LFM router, Turkish-Gemma, R+Quarto+TeX, LEANN, Little Snitch, launchctl, cron, ceddcozum, style-calibration, cherry-pick skills
+
+### Decided — Hermes strategy: stay on TUI, don't pair
+
+Per user feedback: pairing Hermes with OpenCode or switching to Ollama re-adds moat we cut earlier. Hermes Desktop is "coming soon" per Nous Research (`desktop-pr20059-installers` tag); when it ships, the swap is just replacing `~/Desktop/Hermes.command` with the Desktop launcher. Skills, hooks, audit, system prompts don't change.
+
+`SETUP_PROMPT.md` Phase 7 now has a "Why we stay on Hermes TUI today" note explaining the deliberate thinness of the harness layer:
+- `~/.hermes/config.yaml` is ~10 lines
+- `Hermes.command` is 3 lines
+- Skills + hooks + audit are harness-agnostic
+- Swap-cost when Desktop ships: ~5 minutes
+
+### Decisions on 27B vs 35B-A3B for write-mode
+
+**Hold the routing as-is** (27B dense → write/review/long/critique; 35B-A3B MoE → code/agent/quick/vision/stats). A/B test embedded in Phase A; revisit after real use surfaces actual coherence differences on Turkish text. No code change.
+
+---
+
 ## [0.9.2] — 2026-05-19 — Round-2 review bug fixes (Cursor + ChatGPT + Claude)
 
 After v0.9.1, a second-round 4-way review (Cursor Composer 2.5 + ChatGPT + Claude incognito + Grok) surfaced three real bugs that survived v0.9.0 + v0.9.1 and one architectural reframe.
@@ -42,12 +78,6 @@ ollama pull qwen3.6:35b-a3b
 Trade-offs: lose explicit `--mlock` / `--ctx-size` control (set via Ollama's `Modelfile` instead); Ollama abstracts llama.cpp; Phase 0 PRE-CHECK already detects existing Ollama on :11434 and handles the collision.
 
 For Bora's tier: llama-server direct (more control). For colleagues with no preferences: Ollama is fine; downstream skills don't notice.
-
-### Three claims by reviewers that were already fixed (false positives)
-
-- **`en0` still hardcoded** (ChatGPT): false. v0.9.0 already added auto-detection via `networksetup -listallhardwareports`. The comment line that contains "en0 is not universal" misled the reader.
-- **Skill count claims of 70/78** (ChatGPT): false. v0.9.0 updated to ≥60 threshold and "~74 skills" message. The standing claim was already correct.
-- **Duplicate GGUF download blocks** (Cursor + ChatGPT, v0.9.0): partially fixed — Phase 1 has 10 `huggingface-cli download` invocations but they're inside MLX vs GGUF if/else branches. Not duplicates; alternatives. The visual density still tripped reviewers; no change needed.
 
 ### Open
 
