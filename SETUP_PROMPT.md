@@ -86,37 +86,50 @@ which brew >/dev/null || /bin/bash -c "$(curl -fsSL https://raw.githubuserconten
 brew install uv pipx
 pipx ensurepath
 
-# Raindrop Workshop (local-first agent debugger by Ben Hylak)
+# Raindrop Workshop (local-first agent debugger by Ben Hylak — covers audit)
 curl -fsSL https://raindrop.sh/install | bash
 
 # Lessons file
 mkdir -p ~/.research && touch ~/.research/lessons.md
 
-# ─── RECOMMENDED (skip if you trust Raindrop alone) ────────────────────
-if [ "${INSTALL_MITMPROXY:-yes}" = "yes" ]; then
-    brew install mitmproxy
-    # mitmproxy is for HTTP-level audit of localhost:11434.
-    # Raindrop covers semantic spans. mitmproxy gives belt-and-suspenders for KVKK Art. 12.
-fi
+# ─── RECOMMENDED ───────────────────────────────────────────────────────
+# direnv: per-folder .envrc loader for momentary-online API keys
+# (PubMed, Crossref, OpenAlex). Plain .envrc on a FileVault disk is
+# fine; we do NOT install 1Password/doppler — overkill for our threat model.
+brew install direnv
+grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
 
-# ─── OPTIONAL (only if user has secrets they manage across projects) ──
-if [ "${INSTALL_SECRETS_MANAGER:-no}" = "yes" ]; then
-    brew install direnv
-    brew install --cask 1password-cli || brew install doppler/cli/doppler
-    grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-fi
+# Example: per-project .envrc for online lookups (use during brief Setup Mode lifts)
+cat > ~/.research/projects/.envrc.example <<'ENVRC'
+# Place this as .envrc in your project folder; direnv auto-loads when you cd in.
+# Then `direnv allow` once to authorize.
+# These keys are INERT during air-gap Research Mode (Little Snitch blocks egress).
+
+export PUBMED_API_KEY="your-key-here"
+export CROSSREF_USER_AGENT="ResearchPipeline/1.0 (mailto:you@example.edu)"
+export OPENALEX_EMAIL="you@example.edu"
+ENVRC
+mkdir -p ~/.research/projects
 
 # ─── DEFERRED (install when user writes their first eval) ──────────────
 # pipx install inspect-ai
-# Ask the user before installing if they're going to write evals soon.
+# Skip during initial setup. Add the day you start measuring your skills.
+
+# ─── FALLBACK (install only if we drop Raindrop) ──────────────────────
+# mitmproxy is HTTP-level wiretap at localhost:11434.
+# Raindrop Workshop already covers this semantically with richer structure
+# (turn-level / tool-level / subagent spans). Don't run both — Raindrop is the pick.
+# If Raindrop is ever dropped from the stack: `brew install mitmproxy` and
+# point it at :11434 to keep KVKK Art. 12 HTTP audit coverage.
 
 # ─── DROPPED (redundant for our use case) ──────────────────────────────
-# litellm — we have no providers to route and no budget caps to enforce.
-#           Audit is covered by hooks + Raindrop. Skip.
+# litellm — no providers to route, no budget caps to enforce, audit covered.
+# 1Password CLI / doppler — overkill for our threat model. FileVault + .envrc is enough.
 
 # Verification
 uv --version && which pipx && raindrop --version || \
     echo "WARN: Raindrop CLI not found; check ~/.local/bin in PATH"
+direnv --version
 ```
 
 Log to `~/.research/lessons.md` any package that failed and how you worked around it.
@@ -125,35 +138,21 @@ Log to `~/.research/lessons.md` any package that failed and how you worked aroun
 
 ## PHASE 1 — INFERENCE LAYER (~30 min, mostly download time)
 
-**Format choice — ask the user**:
+**Format auto-detected by device**. M-series Mac → MLX (Apple-native, ~60% faster). Everything else → GGUF via llama.cpp (universal).
 
 ```bash
 # Detect device
-CHIP=$(system_profiler SPHardwareDataType | grep "Chip:" | awk '{print $2}')
-RAM_GB=$(($(sysctl -n hw.memsize) / 1024 / 1024 / 1024))
-echo "Device: $CHIP, $RAM_GB GB"
+CHIP=$(system_profiler SPHardwareDataType 2>/dev/null | grep "Chip:" | awk -F: '{print $2}' | xargs)
+RAM_GB=$(($(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 / 1024 / 1024))
+echo "Device: ${CHIP:-non-Apple}, ${RAM_GB} GB RAM"
 
-# Default: GGUF via llama.cpp (universal — Apple Metal, Linux CUDA, Windows)
-# Opt-in: MLX (Apple Silicon only, ~20-87% faster but Apple-bound)
-INFERENCE_FORMAT="${INFERENCE_FORMAT:-gguf}"  # gguf | mlx
-if [[ "$CHIP" == *"M3"* || "$CHIP" == *"M4"* ]]; then
-    cat <<EOF
-M-series Mac detected ($CHIP). You have two options:
-
-  [gguf] llama.cpp + GGUF format
-         Universal (works on Linux/Windows too — colleagues stay portable)
-         ~50 tok/s for Qwen 3.6 35B-A3B Q4_K_M on M3 Max
-         Default. Pick this unless you specifically want max throughput.
-
-  [mlx]  Apple MLX format + mlx-lm server
-         Apple Silicon only
-         ~80 tok/s for Qwen 3.6 35B-A3B 4-bit on M3 Max (~60% faster than GGUF)
-         Trade: cannot share install instructions with non-Mac colleagues
-         Use only if max throughput matters more than portability
-
-Choose [gguf/mlx]:
-EOF
-    read -r INFERENCE_FORMAT
+# Auto-pick format
+if [[ "$CHIP" == *"M1"* || "$CHIP" == *"M2"* || "$CHIP" == *"M3"* || "$CHIP" == *"M4"* ]]; then
+    INFERENCE_FORMAT="mlx"
+    echo "✓ M-series detected → MLX (Apple-native, ~80 tok/s for Qwen 3.6 35B-A3B on M3 Max)"
+else
+    INFERENCE_FORMAT="gguf"
+    echo "✓ Non-Apple-Silicon → GGUF via llama.cpp (universal, ~30-50 tok/s depending on hardware)"
 fi
 
 mkdir -p ~/.research/{models,logs,services}
@@ -161,10 +160,53 @@ mkdir -p ~/.research/{models,logs,services}
 # Install runtime
 if [ "$INFERENCE_FORMAT" = "mlx" ]; then
     pipx install mlx-lm
-    pipx install mlx-vlm   # for vision support
+    pipx install mlx-vlm   # for vision support (Qwen 3.6 35B-A3B has vision)
+
+    # Download MLX-converted models
+    huggingface-cli download \
+        mlx-community/Qwen3.6-35B-A3B-4bit-MLX \
+        --local-dir ~/.research/models/Qwen3.6-35B-A3B-MLX-4bit &
+
+    huggingface-cli download \
+        mlx-community/Qwen3.6-27B-4bit-MLX \
+        --local-dir ~/.research/models/Qwen3.6-27B-MLX-4bit &
+
+    # LFM2.5 + Turkish-Gemma may not yet have MLX variants; fall back to GGUF for these:
+    huggingface-cli download \
+        LiquidAI/LFM2.5-350M-tool-use-GGUF \
+        LFM2.5-350M-tool-use-Q8_0.gguf \
+        --local-dir ~/.research/models &
 else
     brew install llama.cpp
+
+    huggingface-cli download \
+        unsloth/Qwen3.6-35B-A3B-GGUF \
+        Qwen3.6-35B-A3B-Q4_K_M.gguf \
+        --local-dir ~/.research/models &
+
+    huggingface-cli download \
+        unsloth/Qwen3.6-27B-GGUF \
+        Qwen3.6-27B-Q4_K_M.gguf \
+        --local-dir ~/.research/models &
+
+    huggingface-cli download \
+        LiquidAI/LFM2.5-350M-tool-use-GGUF \
+        LFM2.5-350M-tool-use-Q8_0.gguf \
+        --local-dir ~/.research/models &
 fi
+
+# Optional Turkish model — always GGUF (LFM2.5 + Turkish-Gemma not yet in MLX format as of May 2026)
+if [ "$FIELD" = "pediatric endocrinology" ]; then
+    huggingface-cli download \
+        ytu-ce-cosmos/Turkish-Gemma-9b-T1-GGUF \
+        Turkish-Gemma-9b-T1-Q4_K_M.gguf \
+        --local-dir ~/.research/models &
+fi
+
+wait
+
+# Verify download integrity
+cd ~/.research/models && find . -name "*.gguf" -o -name "*.safetensors" -o -name "*.npz" | xargs sha256sum > checksums.txt 2>/dev/null
 
 # Download GGUFs (in parallel where possible — wget in background)
 huggingface-cli download \
@@ -194,9 +236,27 @@ wait
 cd ~/.research/models && sha256sum *.gguf > checksums.txt
 ```
 
-Write three launchctl plists (one per service):
+Write launchctl plists (two services). Server binary depends on inference format:
+
+- `INFERENCE_FORMAT=mlx` → `mlx_lm.server` (from the mlx-lm pipx install)
+- `INFERENCE_FORMAT=gguf` → `llama-server` (from llama.cpp brew install)
+
+Both expose an OpenAI-compatible HTTP API on the same port — downstream skills don't care which.
 
 ```bash
+# Resolve server binary path + model arg
+if [ "$INFERENCE_FORMAT" = "mlx" ]; then
+    SERVER_BIN=$(pipx environment --value PIPX_LOCAL_VENVS)/mlx-lm/bin/mlx_lm.server
+    QWEN_MODEL_ARG="--model ~/.research/models/Qwen3.6-35B-A3B-MLX-4bit"
+    LFM_MODEL_ARG="--model ~/.research/models/LFM2.5-350M-tool-use-Q8_0.gguf"  # fall back to GGUF via llama.cpp; install both runtimes if needed
+    SERVER_FLAGS="--host 127.0.0.1 --trust-remote-code"
+else
+    SERVER_BIN=/opt/homebrew/bin/llama-server
+    QWEN_MODEL_ARG="--model ~/.research/models/Qwen3.6-35B-A3B-Q4_K_M.gguf"
+    LFM_MODEL_ARG="--model ~/.research/models/LFM2.5-350M-tool-use-Q8_0.gguf"
+    SERVER_FLAGS="--ctx-size 32768 --n-gpu-layers 999 --host 127.0.0.1 --mlock --jinja --chat-template chatml --api-key local"
+fi
+
 # Service A: Qwen 3.6 35B-A3B on :11434 (default loaded model)
 cat > ~/.research/services/com.bora.llama-server.qwen.plist <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

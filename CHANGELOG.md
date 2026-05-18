@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.6.1] — 2026-05-18 — Preflight refinement based on Bora's "what is doppler/direnv?" pass
+
+### Changed — Phase 0 preflight further simplified
+
+- **direnv**: moved from OPTIONAL → RECOMMENDED. Reason: PubMed/Crossref/OpenAlex API keys for momentary-online lookups need a clean per-folder loader. Plain `.envrc` on a FileVault disk is fine for low-cosmic secrets like open API keys. ~30 LOC shell setup.
+- **1Password CLI / doppler / vault**: moved from OPTIONAL → DROPPED. Reason: overkill for our threat model. The secrets we have (open APIs) don't justify a separate password manager.
+- **mitmproxy**: moved from RECOMMENDED → **FALLBACK** tier. Reason: Raindrop Workshop covers semantic HTTP audit better. Don't run both. Note kept in preflight doc: install mitmproxy ONLY if Raindrop is ever dropped from the stack.
+- **litellm**: confirmed DROPPED (was already).
+- **inspect-ai**: confirmed DEFERRED (install when user writes first eval).
+
+`SETUP_PROMPT.md` Phase 0 rewritten to match. Includes a working `.envrc.example` for the project folder pattern.
+
+### Changed — Phase 1 inference format auto-detected, no prompt
+
+- Per Bora's call: **auto-pick by device, no user prompt**
+- M-series Mac → `mlx-lm.server` + MLX models from `mlx-community/...`
+- Non-Apple-Silicon → `llama.cpp` + GGUF
+- Both expose OpenAI-compatible HTTP — downstream skills don't care which
+- LFM2.5 + Turkish-Gemma stay GGUF regardless (no MLX variants as of May 2026)
+- Server-binary path + model args + flags branch on `INFERENCE_FORMAT` env var
+
+### Why this is "0.6.1" not "0.7.0"
+
+These are refinements to v0.6 decisions, not new features. The user's questions exposed places where I'd over-engineered (1Password) or under-decided (MLX/GGUF as user prompt vs auto-pick).
+
+---
+
 ## [0.6.0] — 2026-05-18 — Preflight rationalized, MLX/GGUF choice, clean-session online lookup, setup scripts, Little Snitch profile, 3 stub field presets
 
 ### Rationalized — preflight tools

@@ -7,10 +7,11 @@
 | Tier | Tools | Justification |
 |---|---|---|
 | **MANDATORY** | uv, pipx, llama.cpp, Raindrop Workshop | Cannot run the stack without these |
-| **RECOMMENDED** | mitmproxy (HTTP-level audit) — but optional if you trust Raindrop Workshop alone | Defense-in-depth for KVKK Art. 12 audit; Raindrop covers semantic spans, mitmproxy covers raw HTTP |
+| **RECOMMENDED** | direnv | Per-folder `.envrc` for momentary-online API keys (PubMed, Crossref, OpenAlex). Plain `.envrc` is fine on a FileVault-encrypted disk; no password manager needed. ~30 LOC shell setup. |
 | **DEFERRED** | inspect-ai | Eval framework. Install when you actually need to write evals (week 2+, not day 1) |
-| **OPTIONAL** | direnv + 1Password CLI / doppler | Only needed if you do cross-project secret work outside air-gap. Default: skip |
+| **FALLBACK** | mitmproxy | Install **only if we drop Raindrop Workshop later**. mitmproxy is HTTP-level audit; Raindrop covers it semantically. Don't run both. |
 | **DROPPED** | litellm | Redundant for our case: no providers to route (single local model), no budget caps (local = free), audit covered by hooks + Raindrop |
+| **DROPPED** | 1Password CLI, doppler, vault | Over-engineering for our threat model. A FileVault disk + a `.envrc` file is already encrypted at rest, and the only secrets that matter for our use case are open-API keys (PubMed, Crossref) where rotation cost is low. Add a password manager only if you already use one. |
 
 The original Karpathy 5-step assumes cloud-API agent development. Our case is the opposite — local-only, single-model. The tools that mattered against $4k cloud bills and prompt-injection leaks via remote search tools don't apply.
 
