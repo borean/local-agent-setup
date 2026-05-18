@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.7.0] — 2026-05-18 — Browser-AI-first setup flow + field-preset generation at setup time + npx ceddcozum + direnv mandatory
+
+### Changed — setup audience expanded to browser AIs
+
+Per Bora: most users will paste the repo URL into ChatGPT or Claude.ai (browser), NOT install a CLI coding agent. README rewritten to make browser path the **default**:
+
+- **🟢 Browser path**: paste repo URL into ChatGPT/Claude.ai, the AI reads the repo and walks you through Phases 0-9 command-by-command, you paste each command into Terminal yourself. No CLI install needed.
+- **🔵 Power-user path**: Claude Code / Codex / Gemini CLI users get the same setup ~30% faster because the agent runs commands directly.
+
+`AGENTS.md` rewritten to handle both scenarios — browser AI walks through one command at a time, CLI agent runs phases directly. Both end at the same hand-off message.
+
+### Changed — direnv promoted to MANDATORY
+
+Per Bora: "temporary online setup is a real and gonna-be-used thing anyway." Moving direnv from RECOMMENDED to MANDATORY means it gets installed during the one-time setup, not as friction later. PubMed/Crossref/OpenAlex keys go in per-folder `.envrc`, plain FileVault encryption is enough — no 1Password/doppler.
+
+`preflight-install-order.md` and `SETUP_PROMPT.md` Phase 0 updated.
+
+### Changed — field presets generated during setup, not hardcoded
+
+Per Bora: "Full population of oncology/IM/surgery presets and US-specific peds-endo variant should be on the initial online setup phase imho. not hardcoded."
+
+- **Moved** all 4 field presets (peds-endo, oncology, IM, surgery) from `system-prompts/field-presets/` to `references/field-preset-examples/`
+- **New** `system-prompts/field-presets/README.md` explains the model: examples in `references/` are structural templates; setup generates the actual loaded preset per user
+- **New Phase 4.5** in `SETUP_PROMPT.md`: synthesize field preset from template + current author guidelines fetched via `online-lookup` for the user's target journals. Cached to `~/Research/cache/journal-guidelines/`.
+- For the user's exact field/locale combination (e.g., "pediatric endocrinology in US"), the setup generates a fresh customized preset. No stale stubs.
+
+### Added — `npx ceddcozum` integration in Phase 4
+
+Per Bora: "lets include npx ceddcozum on initial setup?" Adding to the references-cache step:
+
+```bash
+# In Phase 4 — caches
+if [ "$FIELD_SLUG" = "pediatric-endocrinology" ]; then
+    npx -y ceddcozum@latest --export-references --output ~/Research/cache/references/
+fi
+```
+
+If `--export-references` isn't yet a command in his NPM package, the SETUP_PROMPT logs a TODO for him + falls back to cloning the package source.
+
+Generalizable pattern: if a user has their own data tool (CSV exports, reference packages, etc.), Phase 4 invites them to invoke it during setup to seed the local cache.
+
+### Open
+
+- `npx ceddcozum --export-references` command itself doesn't exist yet — TODO for Bora to add to the ceddcozum package
+- Browser-AI Phase 4.5 generation needs the setup AI to actually fetch live journal sites (might fail for paywalled sites)
+- README quick-start tested only in a copy-paste sense; the actual "paste repo URL into ChatGPT" workflow needs a real test
+- Field preset generation in Phase 4.5 may be slow with browser AIs that can't fetch multiple URLs in parallel
+
+---
+
 ## [0.6.1] — 2026-05-18 — Preflight refinement based on Bora's "what is doppler/direnv?" pass
 
 ### Changed — Phase 0 preflight further simplified

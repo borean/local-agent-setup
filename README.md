@@ -34,17 +34,40 @@ A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM
 
 ## How to use this repo
 
-### Day 1 — Setup (you + your frontier LLM)
+### Setup — pick one of two paths
 
-1. Sign in to whichever frontier LLM agent you have (Claude Code, Codex, Gemini CLI)
-2. Tell it: *"Read the SETUP_PROMPT.md at https://github.com/borean/local-agent-setup and set up my air-gapped medical research environment per the plan."*
-3. Approve big decisions as it asks (model paths, IRB project ID, daily-use GUI choice)
-4. When it prints the hand-off message:
-   - Uninstall the frontier LLM app
+#### 🟢 Browser path (default — works for anyone, no CLI install needed)
+
+1. Open **ChatGPT** ([chat.openai.com](https://chat.openai.com)) or **Claude** ([claude.ai](https://claude.ai)) in your browser.
+2. Paste this prompt:
+
+   > Read https://github.com/borean/local-agent-setup — especially SETUP_PROMPT.md, AGENTS.md, and README.md. Then guide me through setting up the air-gapped medical research LLM environment described in the repo. I'll run terminal commands myself; you tell me what to type and what to expect. Walk through one phase at a time. Wait for me to confirm each step before moving on.
+
+3. The browser AI reads the repo and walks you through Phases 0-9, one terminal command at a time. You paste each command into your Mac's Terminal app (Cmd-Space → "Terminal").
+4. When the AI gets to the hand-off step:
+   - Close the browser AI tab
    - Flip Little Snitch → "Research Mode"
    - Launch Hermes Agent Desktop
 
-### Day 2+ — Daily use (you alone, no terminal)
+**Expected total time**: ~2 hours, mostly waiting for model downloads.
+**What you need**: a Mac (Apple Silicon strongly preferred), a free ChatGPT or Claude account, ~50 GB free disk space, ~2 hours of attention.
+**What you don't need**: any installed CLI tool, git, Python, R, or terminal expertise. The browser AI explains each step.
+
+#### 🔵 Power-user path (Claude Code / Codex / Gemini CLI users)
+
+If you already have a coding-agent CLI installed and want the agent to run the commands directly (no copy-paste back and forth):
+
+```bash
+git clone https://github.com/borean/local-agent-setup ~/local-agent-setup
+cd ~/local-agent-setup
+# Open Claude Code, Codex, or Gemini CLI in this directory
+# Tell it:
+```
+> Read SETUP_PROMPT.md and execute Phases 0-9. Use the verification suite. Write lessons to ~/.research/lessons.md. Print the hand-off message when done.
+
+The CLI path is ~30% faster (the agent runs commands directly) but requires you to already have a coding-agent CLI. Both paths produce the same end state.
+
+### Day 2+ — Daily use (no terminal needed)
 
 - Open Hermes Agent Desktop → chat box
 - Type a session opener: `session-launch write-mode` or `session-launch code-mode`

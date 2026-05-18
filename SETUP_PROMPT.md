@@ -83,8 +83,9 @@ After this block, commit each answer to `~/.research/setup-answers.yaml` for aud
 which brew >/dev/null || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # ─── MANDATORY ─────────────────────────────────────────────────────────
-brew install uv pipx
+brew install uv pipx direnv
 pipx ensurepath
+grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
 
 # Raindrop Workshop (local-first agent debugger by Ben Hylak — covers audit)
 curl -fsSL https://raindrop.sh/install | bash
@@ -92,24 +93,18 @@ curl -fsSL https://raindrop.sh/install | bash
 # Lessons file
 mkdir -p ~/.research && touch ~/.research/lessons.md
 
-# ─── RECOMMENDED ───────────────────────────────────────────────────────
-# direnv: per-folder .envrc loader for momentary-online API keys
-# (PubMed, Crossref, OpenAlex). Plain .envrc on a FileVault disk is
-# fine; we do NOT install 1Password/doppler — overkill for our threat model.
-brew install direnv
-grep -q 'direnv hook' ~/.zshrc || echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-
-# Example: per-project .envrc for online lookups (use during brief Setup Mode lifts)
+# Per-project .envrc template for online lookups (used during brief Setup Mode lifts)
+mkdir -p ~/.research/projects
 cat > ~/.research/projects/.envrc.example <<'ENVRC'
 # Place this as .envrc in your project folder; direnv auto-loads when you cd in.
 # Then `direnv allow` once to authorize.
 # These keys are INERT during air-gap Research Mode (Little Snitch blocks egress).
+# They activate only during a momentary Setup-Mode lift.
 
 export PUBMED_API_KEY="your-key-here"
 export CROSSREF_USER_AGENT="ResearchPipeline/1.0 (mailto:you@example.edu)"
 export OPENALEX_EMAIL="you@example.edu"
 ENVRC
-mkdir -p ~/.research/projects
 
 # ─── DEFERRED (install when user writes their first eval) ──────────────
 # pipx install inspect-ai
@@ -440,6 +435,27 @@ bash ~/local-agent-setup/scripts/download-guidelines.sh \
     --output ~/Research/cache/guidelines/
 
 # Normative reference data (growth charts, lab refs)
+# Strategy: prefer Bora's existing ceddcozum NPM package (most curated peds-endo
+# references already exist there); fall back to scripts/download-references.sh
+# for sources not in ceddcozum (WHO/CDC).
+
+if [ "$FIELD_SLUG" = "pediatric-endocrinology" ] || [ "${USE_CEDDCOZUM:-yes}" = "yes" ]; then
+    if command -v npx >/dev/null 2>&1; then
+        # ceddcozum has Neyzi LMS + other Turkish peds-endo references curated.
+        # If --export-references is not yet available in the package, this is
+        # a TODO for Bora to add it. Best-effort:
+        npx -y ceddcozum@latest --export-references --output ~/Research/cache/references/ 2>/dev/null || {
+            echo "  ℹ️  ceddcozum --export-references not available."
+            echo "     TODO for Bora: add 'export-references' command to ceddcozum CLI."
+            echo "     For now: clone the source + copy data files manually:"
+            echo "       git clone https://github.com/borean/ceddcozum /tmp/ceddcozum-src"
+            echo "       cp -r /tmp/ceddcozum-src/src/data/* ~/Research/cache/references/"
+            echo "       (verify the path; tool may have refactored)"
+        }
+    fi
+fi
+
+# Generic fallback — runs always to fill WHO/CDC and pointer files
 bash ~/local-agent-setup/scripts/download-references.sh \
     --output ~/Research/cache/references/
 
@@ -449,6 +465,70 @@ git clone --depth=1 https://github.com/quarto-journals/nejm ~/Research/cache/tem
 git clone --depth=1 https://github.com/quarto-journals/lancet ~/Research/cache/templates/lancet
 git clone --depth=1 https://github.com/quarto-journals/elsevier ~/Research/cache/templates/elsevier
 ```
+
+---
+
+## PHASE 4.5 — FIELD PRESET GENERATION (~10 min, requires brief online window)
+
+Generate the user's field-specific voice baseline **fresh from current author guidelines**, not from hardcoded stubs. This is "real-time" generation:
+
+```bash
+# Determine field slug from earlier preflight Q&A
+FIELD_SLUG=$(echo "$FIELD" | tr ' /' '-' | tr 'A-Z' 'a-z')
+
+# 1. Check if we have a reference example to use as a structural template
+EXAMPLE=~/local-agent-setup/references/field-preset-examples/${FIELD_SLUG}.md
+if [ ! -f "$EXAMPLE" ]; then
+    # Fall back to peds-endo example as structure (its sections generalize)
+    EXAMPLE=~/local-agent-setup/references/field-preset-examples/pediatric-endocrinology.md
+    echo "  ℹ️  No example for '$FIELD'; using peds-endo as structural template"
+fi
+
+# 2. Identify target journals for this field (ask user or default to common picks)
+# Default mapping (user can override during pre-flight Q&A)
+case "$FIELD_SLUG" in
+    pediatric-endocrinology) TARGET_JOURNALS=("JCEM" "JPEM" "Diabetes Care" "Frontiers Endocrinology" "Lancet D&E") ;;
+    oncology)                TARGET_JOURNALS=("JCO" "Lancet Oncology" "Cancer" "JAMA Oncology" "Annals of Oncology") ;;
+    internal-medicine)       TARGET_JOURNALS=("NEJM" "JAMA Internal Medicine" "Annals of Internal Medicine" "BMJ" "JGIM") ;;
+    surgery)                 TARGET_JOURNALS=("Annals of Surgery" "JAMA Surgery" "BJS" "Ann Surg Oncol" "Surgery") ;;
+    *) TARGET_JOURNALS=()   # user will provide via interactive prompt
+esac
+
+# 3. Lift Research Mode briefly to fetch each journal's current author guidelines
+# (Research Mode not yet active during setup; this works inline)
+mkdir -p ~/Research/cache/journal-guidelines
+for journal in "${TARGET_JOURNALS[@]}"; do
+    JSLUG=$(echo "$journal" | tr ' /' '-' | tr 'A-Z' 'a-z')
+    echo "  → fetching author guidelines for $journal..."
+    # Each journal needs its own fetch URL — frontier LLM running this script
+    # should look up the current URL and fetch the page, parse, save as YAML
+    # See skills/shared/07-online-lookup/SKILL.md for the schema
+    # Placeholder — frontier LLM fills in:
+    # curl -sL "<journal-guideline-url>" -o "/tmp/${JSLUG}-raw.html"
+    # parse to YAML per the schema in online-lookup
+    # save to ~/Research/cache/journal-guidelines/${JSLUG}.yaml
+done
+
+# 4. Synthesize field preset from template + fetched guidelines
+# The setup-time frontier LLM (Claude Code / ChatGPT-via-browser / etc.) does this:
+# - Read the example at $EXAMPLE
+# - Read all the journal guideline YAMLs
+# - Synthesize a coherent voice baseline for THIS user's exact field + target journals
+# - Include their preferred language (TR/EN code-switch ratio, if applicable)
+# - Write to ~/.agents/system-prompts/field-presets/${FIELD_SLUG}.md
+
+PRESET_PATH=~/.agents/system-prompts/field-presets/${FIELD_SLUG}.md
+# The frontier LLM doing setup writes this file based on $EXAMPLE + fetched guidelines.
+# Final file should follow the structure of references/field-preset-examples/pediatric-endocrinology.md
+
+# 5. Verify the preset was written
+[ -f "$PRESET_PATH" ] || { echo "FAIL: field preset not generated at $PRESET_PATH"; exit 1; }
+echo "✓ Field preset generated: $PRESET_PATH ($(wc -l < $PRESET_PATH) lines)"
+```
+
+**Note for the frontier LLM running setup**: this phase requires you to actually fetch current author guidelines from journal websites and synthesize a field-specific preset. Don't skip; don't fall back to the example verbatim. The whole point of doing this at setup time is to get current information.
+
+If the user's field isn't in the case statement above, prompt: "What 3-5 journals do you target most often? I'll fetch their current author guidelines."
 
 ---
 

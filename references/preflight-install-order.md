@@ -6,8 +6,7 @@
 
 | Tier | Tools | Justification |
 |---|---|---|
-| **MANDATORY** | uv, pipx, llama.cpp, Raindrop Workshop | Cannot run the stack without these |
-| **RECOMMENDED** | direnv | Per-folder `.envrc` for momentary-online API keys (PubMed, Crossref, OpenAlex). Plain `.envrc` is fine on a FileVault-encrypted disk; no password manager needed. ~30 LOC shell setup. |
+| **MANDATORY** | uv, pipx, **direnv**, llama.cpp, Raindrop Workshop | direnv is now mandatory: the momentary-online phase (PubMed/Crossref/OpenAlex lookups) is a real and recurring use-case, not a maybe. Better to install during the one-time setup than as friction later. |
 | **DEFERRED** | inspect-ai | Eval framework. Install when you actually need to write evals (week 2+, not day 1) |
 | **FALLBACK** | mitmproxy | Install **only if we drop Raindrop Workshop later**. mitmproxy is HTTP-level audit; Raindrop covers it semantically. Don't run both. |
 | **DROPPED** | litellm | Redundant for our case: no providers to route (single local model), no budget caps (local = free), audit covered by hooks + Raindrop |
