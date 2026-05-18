@@ -45,9 +45,13 @@ Run these exact questions back-to-back. Capture answers; do not ask again.
    Expected: Apple Silicon M3 or M4, 32 GB+ RAM. If <32 GB, warn user
    that 27B dense will be painful (<14 tok/s); 35B-A3B still usable.
 
-2. Zotero library path:
-   Default: ~/Zotero
-   If different, ask user.
+2. Literature corpus path (folder of PDFs you want indexed for semantic search):
+   - Default 1: ~/Zotero/storage (if Zotero installed)
+   - Default 2: ~/Documents/Papers (common fallback)
+   - Or any folder of PDFs the user points at
+   - SKIP entirely if user has no organized literature library yet — LEANN can be
+     built later when a corpus exists. The skills work against an empty index too.
+   Sets $LEANN_SOURCE env var. Persisted to ~/.research/setup-env.
 
 3. IRB project ID for audit folder naming:
    Format suggestion: IRB-YYYY-NNN
@@ -245,15 +249,15 @@ if [ "$INFERENCE_FORMAT" = "mlx" ]; then
 
     # LFM2.5 + Turkish-Gemma may not yet have MLX variants; fall back to GGUF for these:
     huggingface-cli download \
-        LiquidAI/LFM2.5-350M-tool-use-GGUF \
-        LFM2.5-350M-tool-use-Q8_0.gguf \
+        LiquidAI/LFM2.5-350M-GGUF \
+        LFM2.5-350M-Q8_0.gguf \
         --local-dir ~/.research/models &
 else
     brew install llama.cpp
 
     huggingface-cli download \
         unsloth/Qwen3.6-35B-A3B-GGUF \
-        Qwen3.6-35B-A3B-Q4_K_M.gguf \
+        Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \
         --local-dir ~/.research/models &
 
     huggingface-cli download \
@@ -262,8 +266,8 @@ else
         --local-dir ~/.research/models &
 
     huggingface-cli download \
-        LiquidAI/LFM2.5-350M-tool-use-GGUF \
-        LFM2.5-350M-tool-use-Q8_0.gguf \
+        LiquidAI/LFM2.5-350M-GGUF \
+        LFM2.5-350M-Q8_0.gguf \
         --local-dir ~/.research/models &
 fi
 
@@ -420,7 +424,11 @@ If both services respond: Phase 1 complete.
 ## PHASE 2 — SKILLS + HOOKS + SYSTEM PROMPTS (~5 min)
 
 ```bash
-mkdir -p ~/.agents/{skills,hooks,system-prompts,state}
+mkdir -p ~/.agents/{skills,hooks,system-prompts,state,bin,tools}
+
+# Install dispatcher scripts (used by cron tasks + verification tests)
+cp $LOCAL_AGENT_SETUP/bin/*.sh ~/.agents/bin/
+chmod +x ~/.agents/bin/*.sh
 
 # System prompts — concatenate Karpathy + air-gap preamble
 cp $LOCAL_AGENT_SETUP/system-prompts/karpathy-12-rules.md ~/.agents/system-prompts/
@@ -501,12 +509,32 @@ quarto install extension quarto-journals/elsevier --no-prompt
 ```bash
 mkdir -p ~/Research/cache/{guidelines,references,templates,wheelhouse}
 
-# LEANN index from Zotero
+# LEANN index from user's literature corpus (Zotero, ~/Documents/Papers, or any PDF folder)
 pipx install leann-core leann-backend-hnsw leann
-leann build \
-    --source ${ZOTERO_PATH:-~/Zotero/storage} \
-    --embed-model bge-m3 \
-    --output ~/.leann/peds-endo-corpus
+
+# Resolve literature source from pre-flight answer or auto-detect
+LEANN_SOURCE="${LEANN_SOURCE:-}"
+if [ -z "$LEANN_SOURCE" ]; then
+    for candidate in ~/Zotero/storage ~/Documents/Papers ~/Papers; do
+        if [ -d "$candidate" ] && [ "$(find "$candidate" -name '*.pdf' | head -1)" ]; then
+            LEANN_SOURCE="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -n "$LEANN_SOURCE" ] && [ -d "$LEANN_SOURCE" ]; then
+    leann build \
+        --source "$LEANN_SOURCE" \
+        --embed-model bge-m3 \
+        --output ~/.leann/peds-endo-corpus
+    echo "✓ LEANN indexed from $LEANN_SOURCE"
+else
+    echo "ℹ️ No literature corpus found at common paths; skipping LEANN build."
+    echo "  When you have a PDF corpus, build the index with:"
+    echo "    leann build --source /path/to/pdfs --embed-model bge-m3 --output ~/.leann/peds-endo-corpus"
+    echo "  paperqa-* skills will work against an empty index until then."
+fi
 
 # Pull bge-m3 embeddings into llama-server (separate small service)
 huggingface-cli download \
@@ -648,13 +676,13 @@ Every call runs **locally**. No network. No PHI leaves the laptop. The agent dis
 # If first_paper: false, ask user for paths to 3-5 of their published papers
 if [ "$FIRST_PAPER" = "false" ]; then
     # Run skill in calibrate mode
-    bash ~/.agents/skills/research/manuscript/style-calibration/invoke.sh \
+    bash ~/.agents/bin/invoke-skill.sh research/manuscript/style-calibration \
         --mode calibrate \
         --papers "${USER_PAPERS[@]}" \
         --username "$USERNAME"
 else
     # First-paper user — generic baseline
-    bash ~/.agents/skills/research/manuscript/style-calibration/invoke.sh \
+    bash ~/.agents/bin/invoke-skill.sh research/manuscript/style-calibration \
         --mode generic \
         --field "$FIELD" \
         --username "$USERNAME"
@@ -859,7 +887,7 @@ leann query ~/.leann/peds-endo-corpus --q "type 1 diabetes pediatric" --top 3 --
 # Test 10: Material Passport emit + resume round-trip
 echo '{"stage":"verify-test","ledger_path":"/tmp/verify-ledger.jsonl"}' > /tmp/verify-input.json
 echo '{"ts":"2026-05-18T00:00:00","event":"test","content":"hello"}' > /tmp/verify-ledger.jsonl
-bash ~/.agents/skills/shared/02-material-passport-emit/invoke.sh < /tmp/verify-input.json \
+bash ~/.agents/bin/invoke-skill.sh shared/02-material-passport-emit --args "$(cat /tmp/verify-input.json)" \
     | jq -e '.passport_hash' || { echo "TEST 10 FAIL: passport emit broken"; exit 1; }
 
 echo ""

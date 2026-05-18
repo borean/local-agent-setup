@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.9.4] — 2026-05-19 — Round-3 review fixes: dispatcher scripts, filenames, generalize literature path
+
+Round-3 5-way review (Grok + Claude + Composer + ChatGPT + Minimax) surfaced six real bugs + one user question. Fixing.
+
+### Fixed — missing dispatcher scripts
+
+Composer caught: `install-cron.sh` writes plists that call `~/.agents/bin/run-cron-task.sh`, but that script didn't exist. Same with `invoke.sh` references in verification tests + style-calibration phase.
+
+Wrote two dispatchers under `bin/`:
+
+- **`bin/run-cron-task.sh`** — reads a cron task's `SKILL.md`, extracts bash code blocks from the `## Procedure` section, executes them, logs stdout+stderr to `~/.research/logs/cron-{task}-{date}.log`, appends to `~/Research/audit/{date}/events.jsonl`. Used by every launchctl-installed cron plist.
+- **`bin/invoke-skill.sh`** — generic dispatcher for any SKILL.md. Reads from `~/.agents/skills/<path>/SKILL.md` (installed) or `$LOCAL_AGENT_SETUP/skills/<path>/SKILL.md` (repo). Extracts bash blocks; if none, dumps the SKILL.md for LLM consumption. Accepts `--args '<json>'` for skill input.
+
+Phase 2 in `SETUP_PROMPT.md` now copies `$LOCAL_AGENT_SETUP/bin/*.sh` → `~/.agents/bin/`. Tests 8 + 10 + Phase 6 style-calibration calls updated to use `~/.agents/bin/invoke-skill.sh <skill-path>` rather than non-existent `<skill>/invoke.sh`.
+
+### Fixed — model filename drift
+
+Composer caught:
+
+1. **Qwen 3.6 35B-A3B**: download was `Qwen3.6-35B-A3B-Q4_K_M.gguf`. Actual filename per HF API (verified May 19 2026 in `references/storage-requirements.md`) is `Qwen3.6-35B-A3B-UD-Q4_K_M.gguf` (Unsloth's dynamic-quant variant, ~5% smaller and the one their docs point to). Updated download command.
+
+2. **LFM2.5-350M**: download was `LiquidAI/LFM2.5-350M-tool-use-GGUF` / `LFM2.5-350M-tool-use-Q8_0.gguf`. Actual repo is `LiquidAI/LFM2.5-350M-GGUF` and filename `LFM2.5-350M-Q8_0.gguf`. The "tool-use" suffix in our paths didn't match HF. Updated both download command and plist references.
+
+### Fixed — Phase A skill paths
+
+ChatGPT caught: `references/phase-a-smoke-test.md` referenced `shared/session-launch` and `shared/output-scrub`, but the actual directories are numerically prefixed: `shared/01-session-launch` and `shared/04-output-scrub`. Updated.
+
+### Generalized — Zotero is no longer mandatory
+
+User feedback: "why do we need zotero again?" Answer: we don't. The LEANN index in Phase 4 needs **a folder of PDFs**, not Zotero specifically.
+
+- Pre-flight Q&A now asks for "Literature corpus path" with defaults: `~/Zotero/storage` → `~/Documents/Papers` → user-provided → skip entirely
+- Phase 4 LEANN build auto-detects across common paths, falls back to "skip with note explaining how to build later"
+- New env var `$LEANN_SOURCE` (persisted to `~/.research/setup-env`)
+- The `leann-search` + `paperqa-*` skills work against an empty index until you have a corpus
+
+### Not addressed (correctly identified false signals)
+
+- Claude: "the 43 skill .md files don't exist yet" — wrong; we have 74 SKILL.md files. Same for hooks (11) and cron tasks (7). Misread the repo.
+- ChatGPT: "scripts are flattened into single long lines" — looks like a viewer artifact in their fetch; files in the repo are multi-line and correct.
+
+### Open (carried from prior versions)
+
+- Hermes Desktop arrival (passive — swap when it ships; `~/Desktop/Hermes.command` shortcut bridges the gap)
+- Linux + Windows setup walk-throughs (deferred)
+- Field preset population for non-peds-endo fields (Phase 4.5 synthesizes at setup time)
+
+---
+
 ## [0.9.3] — 2026-05-19 — Cut moat from changelog + Phase A spine smoke test + Hermes strategy explicit
 
 ### Removed — defensive "false positives" subsection in v0.9.2

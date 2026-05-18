@@ -67,8 +67,8 @@ llama-server \
 # Phase 2 minimal — copy ONLY the 8 critical skills + 5 hooks for the spine
 mkdir -p ~/.agents/{skills,hooks}
 SKILLS_NEEDED=(
-    shared/session-launch
-    shared/output-scrub
+    shared/01-session-launch
+    shared/04-output-scrub
     research/literature/paperqa-summarize
     research/literature/paperqa-synthesize
     research/statistics/data-dictionary
