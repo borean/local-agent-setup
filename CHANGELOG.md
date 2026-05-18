@@ -1,5 +1,62 @@
 # Changelog
 
+## [0.9.2] — 2026-05-19 — Round-2 review bug fixes (Cursor + ChatGPT + Claude)
+
+After v0.9.1, a second-round 4-way review (Cursor Composer 2.5 + ChatGPT + Claude incognito + Grok) surfaced three real bugs that survived v0.9.0 + v0.9.1 and one architectural reframe.
+
+### Bugs fixed
+
+1. **MLX plist heredoc still hardcoded `/opt/homebrew/bin/llama-server`** (ChatGPT + Cursor caught) — `SERVER_BIN` variable was set in Phase 1 but plist `<string>` blocks ignored it. Reverted the heredoc to use `cat > ... <<PLIST` (not `<<'PLIST'` — quoted heredoc) so `$SERVER_BIN`, `$USER_HOME`, `$LLAMA_PORT`, `$LFM_PORT` interpolate. Qwen plist now branches on `$INFERENCE_FORMAT` for MLX vs GGUF. LFM service stays GGUF regardless (no MLX variant ships).
+
+2. **`scripts/install-cron.sh` hardcoded `~/local-agent-setup/cron/...`** (Cursor caught) — line 23 ignored the `$LOCAL_AGENT_SETUP` env var introduced in v0.9.1. Now sources `~/.research/setup-env` if available, falls back to auto-detection across common clone paths, fails loud if neither resolves.
+
+3. **`docs/harness_brief.md` drifted from current state** (Cursor caught) — doc still emphasized LM Studio + Goose + OpenCode picks that were superseded in v0.4.0–v0.6.1. Added a **historical-document header** explaining that the doc captures v0.2.0 comparison work and pointing readers to `SETUP_PROMPT.md` + `CHANGELOG.md` for current state. Old content kept as a reference for *why* the picks evolved.
+
+### Architectural reframe — Hermes Desktop doesn't exist (yet)
+
+Claude (incognito) caught this and it's the most important finding from the round-2 review:
+
+- **Hermes Agent v0.14.0 (May 16, 2026)** ships as a **PyPI package** (`pip install hermes-agent`) with an **Ink-based TUI** + CLI. Verified via [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.16) and [docs](https://hermes-agent.nousresearch.com/).
+- There is **no standalone "Hermes Agent Desktop" .app bundle** today. A `desktop-pr20059-installers` tag exists in the repo but Desktop is not stable / not released.
+- Our v0.2.0–v0.9.1 framing of "Hermes Agent Desktop = daily-use GUI" was wrong.
+
+**Phase 7 rewritten**:
+- Install via `pipx install hermes-agent` (not `brew install --cask hermes-agent`)
+- Config via `~/.hermes/config.yaml` (not `defaults write com.nousresearch.hermes-agent`)
+- Daily-use flow: double-click `~/Desktop/Hermes.command` → opens Terminal.app → Hermes TUI runs → user is in the TUI immediately, never types terminal commands
+- Verification Test 7 updated to check `which hermes` + `grep config.yaml` instead of macOS defaults
+
+The TUI is GUI-feeling once you're in it — keyboard-driven, structured panels, chat box. Functionally equivalent for non-technical clinicians. When Desktop ships, swap the `.command` shortcut for the native app launcher.
+
+### Added — Ollama as simpler alternative path
+
+Per Claude's observation: `ollama run qwen3.6:35b-a3b` is dramatically simpler than building llama-server + writing launchctl plists. Phase 1 now documents Ollama as a **valid alternative path** for colleagues who want the smallest possible setup:
+
+```bash
+brew install ollama
+ollama serve &
+ollama pull qwen3.6:35b-a3b
+# Endpoint http://localhost:11434/v1 — identical OAI-compat
+```
+
+Trade-offs: lose explicit `--mlock` / `--ctx-size` control (set via Ollama's `Modelfile` instead); Ollama abstracts llama.cpp; Phase 0 PRE-CHECK already detects existing Ollama on :11434 and handles the collision.
+
+For Bora's tier: llama-server direct (more control). For colleagues with no preferences: Ollama is fine; downstream skills don't notice.
+
+### Three claims by reviewers that were already fixed (false positives)
+
+- **`en0` still hardcoded** (ChatGPT): false. v0.9.0 already added auto-detection via `networksetup -listallhardwareports`. The comment line that contains "en0 is not universal" misled the reader.
+- **Skill count claims of 70/78** (ChatGPT): false. v0.9.0 updated to ≥60 threshold and "~74 skills" message. The standing claim was already correct.
+- **Duplicate GGUF download blocks** (Cursor + ChatGPT, v0.9.0): partially fixed — Phase 1 has 10 `huggingface-cli download` invocations but they're inside MLX vs GGUF if/else branches. Not duplicates; alternatives. The visual density still tripped reviewers; no change needed.
+
+### Open
+
+- Field preset journals not in built-in case branches still require user to supply 3-5 journals
+- `pin-cherry-picks.sh --refresh` workflow needs quarterly schedule documentation
+- Linux + Windows setup walk-throughs still deferred
+
+---
+
 ## [0.9.1] — 2026-05-19 — Storage table, lessons.md, three deferred items
 
 ### Added — verified storage requirements

@@ -201,6 +201,17 @@ Log to `~/.research/lessons.md` any package that failed and how you worked aroun
 
 **Format auto-detected by device**. M-series Mac → MLX (Apple-native, ~60% faster). Everything else → GGUF via llama.cpp (universal).
 
+**Alternative: Ollama** — simpler one-line install, same OAI-compat endpoint:
+```bash
+brew install ollama
+ollama serve &
+ollama pull qwen3.6:35b-a3b
+# Endpoint: http://localhost:11434/v1 (same as llama-server)
+```
+If you choose Ollama, **skip the launchctl plist work in this Phase** — Ollama manages its own daemon. The Phase 0 PRE-CHECK detects an existing Ollama on :11434 and offers to accept it as the inference backend. Trade-off: Ollama abstracts the underlying llama.cpp; we lose direct control over `--mlock`, `--ctx-size`, etc. (you set these via Ollama's `Modelfile`).
+
+For Bora's setup we use llama-server/mlx_lm.server direct because we've designed around explicit flags. For colleagues who want the simplest path, **Ollama is fine** and the downstream skills don't notice the difference.
+
 ```bash
 # Detect device
 CHIP=$(system_profiler SPHardwareDataType 2>/dev/null | grep "Chip:" | awk -F: '{print $2}' | xargs)
@@ -310,38 +321,56 @@ else
     SERVER_FLAGS="--ctx-size 32768 --n-gpu-layers 999 --host 127.0.0.1 --mlock --jinja --chat-template chatml --api-key local"
 fi
 
-# Service A: Qwen 3.6 35B-A3B on :11434 (default loaded model)
-cat > ~/.research/services/com.bora.llama-server.qwen.plist <<'PLIST'
+# Build plists from variables (no hardcoded paths).
+# Set ProgramArguments differently for MLX vs GGUF.
+
+# Resolve user home
+USER_HOME=$HOME
+
+# Service A: Qwen on $LLAMA_PORT
+if [ "$INFERENCE_FORMAT" = "mlx" ]; then
+    QWEN_PROGRAM_ARGS="
+    <string>$SERVER_BIN</string>
+    <string>--model</string>
+    <string>$USER_HOME/.research/models/Qwen3.6-35B-A3B-MLX-4bit</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>$LLAMA_PORT</string>
+    <string>--trust-remote-code</string>"
+else
+    QWEN_PROGRAM_ARGS="
+    <string>$SERVER_BIN</string>
+    <string>--model</string>
+    <string>$USER_HOME/.research/models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf</string>
+    <string>--ctx-size</string><string>32768</string>
+    <string>--n-gpu-layers</string><string>999</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>$LLAMA_PORT</string>
+    <string>--mlock</string>
+    <string>--jinja</string>
+    <string>--chat-template</string><string>chatml</string>
+    <string>--api-key</string><string>local</string>"
+fi
+
+cat > ~/.research/services/com.bora.llama-server.qwen.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.bora.llama-server.qwen</string>
   <key>ProgramArguments</key>
-  <array>
-    <string>/opt/homebrew/bin/llama-server</string>
-    <string>--model</string>
-    <string>/Users/_USER_/.research/models/Qwen3.6-35B-A3B-Q4_K_M.gguf</string>
-    <string>--ctx-size</string><string>32768</string>
-    <string>--n-gpu-layers</string><string>999</string>
-    <string>--host</string><string>127.0.0.1</string>
-    <string>--port</string><string>11434</string>
-    <string>--mlock</string>
-    <string>--jinja</string>
-    <string>--chat-template</string><string>chatml</string>
-    <string>--api-key</string><string>local</string>
+  <array>$QWEN_PROGRAM_ARGS
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>/Users/_USER_/.research/logs/llama-server-qwen.log</string>
-  <key>StandardErrorPath</key><string>/Users/_USER_/.research/logs/llama-server-qwen.err</string>
+  <key>StandardOutPath</key><string>$USER_HOME/.research/logs/llama-server-qwen.log</string>
+  <key>StandardErrorPath</key><string>$USER_HOME/.research/logs/llama-server-qwen.err</string>
 </dict>
 </plist>
 PLIST
-sed -i '' "s|_USER_|$USER|g" ~/.research/services/com.bora.llama-server.qwen.plist
 
-# Service B: LFM2.5-350M tool-call router on :11436 (always warm)
-cat > ~/.research/services/com.bora.lfm-router.plist <<'PLIST'
+# Service B: LFM2.5-350M tool-call router on $LFM_PORT (always GGUF; no MLX variant yet)
+LLAMA_SERVER_BIN=$(which llama-server || echo "/opt/homebrew/bin/llama-server")
+cat > ~/.research/services/com.bora.lfm-router.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -349,13 +378,13 @@ cat > ~/.research/services/com.bora.lfm-router.plist <<'PLIST'
   <key>Label</key><string>com.bora.lfm-router</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/llama-server</string>
+    <string>$LLAMA_SERVER_BIN</string>
     <string>--model</string>
-    <string>/Users/_USER_/.research/models/LFM2.5-350M-tool-use-Q8_0.gguf</string>
+    <string>$USER_HOME/.research/models/LFM2.5-350M-Q8_0.gguf</string>
     <string>--ctx-size</string><string>8192</string>
     <string>--n-gpu-layers</string><string>999</string>
     <string>--host</string><string>127.0.0.1</string>
-    <string>--port</string><string>11436</string>
+    <string>--port</string><string>$LFM_PORT</string>
     <string>--mlock</string>
     <string>--api-key</string><string>local</string>
   </array>
@@ -364,7 +393,6 @@ cat > ~/.research/services/com.bora.lfm-router.plist <<'PLIST'
 </dict>
 </plist>
 PLIST
-sed -i '' "s|_USER_|$USER|g" ~/.research/services/com.bora.lfm-router.plist
 
 # Load both
 launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.llama-server.qwen.plist
@@ -374,8 +402,8 @@ launchctl bootstrap gui/$(id -u) ~/.research/services/com.bora.lfm-router.plist
 sleep 15
 
 # Verify
-curl -s http://localhost:11434/v1/models | jq -e '.data[0].id' || { echo "FAIL: Qwen not responding"; exit 1; }
-curl -s http://localhost:11436/v1/models | jq -e '.data[0].id' || { echo "FAIL: LFM2.5 not responding"; exit 1; }
+curl -s http://localhost:$LLAMA_PORT/v1/models | jq -e '.data[0].id' || { echo "FAIL: Qwen not responding on :$LLAMA_PORT"; exit 1; }
+curl -s http://localhost:$LFM_PORT/v1/models | jq -e '.data[0].id' || { echo "FAIL: LFM2.5 not responding on :$LFM_PORT"; exit 1; }
 
 # Quick inference smoke test
 curl -s http://localhost:11434/v1/chat/completions \
@@ -638,35 +666,64 @@ cat ~/.agents/system-prompts/${USERNAME}-voice.md | head -20
 
 ---
 
-## PHASE 7 — DAILY-USE GUI (Hermes Agent Desktop, ~5 min)
+## PHASE 7 — HERMES AGENT (CLI + TUI, ~5 min)
+
+**Reality check from v0.9.2 review**: Hermes Agent Desktop **doesn't ship today** (May 19, 2026 — verified). What ships:
+- **Hermes Agent v0.14.0** as a PyPI package: `pip install hermes-agent`
+- Ink-based **TUI** (terminal UI — still feels GUI-like, but runs inside Terminal.app)
+- Shell launcher: just type `hermes`
+- Native Desktop app is a TODO at Nous Research (`desktop-pr20059-installers` tag exists but not stable)
+
+So we install the TUI today and bookmark Desktop for later.
 
 ```bash
-# Install Hermes Agent — VERIFY install method before running
-# Per ChatGPT/Cursor review (May 2026): Homebrew may list it as a formula,
-# not a cask. Check current state first:
-brew search hermes-agent
-# Then install with whichever form Homebrew currently lists:
-#   brew install hermes-agent             # formula path (most likely)
-#   brew install --cask hermes-agent      # cask path (if .app bundle published)
-# Or fall back to direct download from hermesatlas.com if neither works.
+# Install via pipx (isolated env; recommended over pip into system Python)
+pipx install hermes-agent
+pipx ensurepath
 
-# Configure via plist (avoid first-run wizard for headless setup)
-defaults write com.nousresearch.hermes-agent provider "openai-compatible"
-defaults write com.nousresearch.hermes-agent base_url "http://localhost:11434/v1"
-defaults write com.nousresearch.hermes-agent api_key "local"
-defaults write com.nousresearch.hermes-agent default_model "qwen3.6:35b-a3b-q4_K_M"
-defaults write com.nousresearch.hermes-agent skills_path "$HOME/.agents/skills"
-defaults write com.nousresearch.hermes-agent hooks_path "$HOME/.agents/hooks"
-defaults write com.nousresearch.hermes-agent self_evolving_skills_enabled -bool true
-defaults write com.nousresearch.hermes-agent raindrop_local_debugger "http://localhost:5899"
+# Verify
+hermes --version
 
-# Open it once to confirm it launches and finds the local model
-open -g /Applications/Hermes\ Agent.app
-sleep 5
-# Check it didn't error
-osascript -e 'tell application "System Events" to get name of every process' | grep -q "Hermes Agent" \
-    || { echo "FAIL: Hermes Agent did not launch"; exit 1; }
+# Configure via ~/.hermes/config.yaml (the standard Hermes config path)
+mkdir -p ~/.hermes
+cat > ~/.hermes/config.yaml <<EOF
+provider:
+  type: openai-compatible
+  base_url: http://localhost:${LLAMA_PORT:-11434}/v1
+  api_key: local
+  default_model: qwen3.6-35b-a3b
+
+skills_path: $HOME/.agents/skills
+hooks_path: $HOME/.agents/hooks
+system_prompts_path: $HOME/.agents/system-prompts
+
+self_evolving_skills:
+  enabled: true
+
+raindrop:
+  local_debugger: http://localhost:5899
+  via_plugin: hermes-otel    # per references/hermes-raindrop-bridge.md
+EOF
+
+# Optional: install the hermes-otel plugin for Raindrop tracing
+hermes plugins install briancaffey/hermes-otel || \
+    echo "  ℹ️ hermes-otel install failed; Raindrop bridge optional"
+
+# Make Hermes one-click launchable from Finder
+# Create a .command file the user double-clicks (no Terminal commands needed by them after this)
+mkdir -p ~/Desktop
+cat > ~/Desktop/Hermes.command <<'CMD'
+#!/bin/bash
+cd "$HOME"
+exec hermes
+CMD
+chmod +x ~/Desktop/Hermes.command
+
+# Smoke test the connection
+hermes --check  # should print: "Provider reachable: localhost:11434/v1 ✓"
 ```
+
+**Daily-use flow**: user double-clicks `~/Desktop/Hermes.command`. Terminal opens with Hermes TUI running. They never type a terminal command — they're inside Hermes immediately. When Hermes Desktop ships (Nous Research roadmap), swap the `.command` shortcut for the Desktop launcher.
 
 ---
 
@@ -778,12 +835,13 @@ echo '{"session_id":"verify-test","cwd":"/tmp"}' | bash ~/.agents/hooks/session-
 # Test 6: audit log creation
 ls -la ~/Research/audit/$(date +%F)/ || { echo "TEST 6 FAIL: audit folder missing"; exit 1; }
 
-# Test 7: Hermes Desktop is running with correct config
-defaults read com.nousresearch.hermes-agent base_url | grep -q "localhost:11434" \
+# Test 7: Hermes CLI is installed + config points to our local llama-server
+which hermes >/dev/null || { echo "TEST 7 FAIL: hermes CLI not found"; exit 1; }
+grep -q "base_url.*localhost:${LLAMA_PORT:-11434}" ~/.hermes/config.yaml \
     || { echo "TEST 7 FAIL: Hermes config wrong"; exit 1; }
 
 # Test 8: R + ellmer can talk to local llama-server
-R --vanilla -e 'library(ellmer); chat <- chat_openai(base_url="http://localhost:11434/v1", api_key="local", model="qwen3.6:35b-a3b-q4_K_M"); cat(chat$chat("Reply OK"))' \
+R --vanilla -e "library(ellmer); chat <- chat_openai(base_url=\"http://localhost:${LLAMA_PORT:-11434}/v1\", api_key=\"local\", model=\"qwen3.6-35b-a3b\"); cat(chat\$chat(\"Reply OK\"))" \
     | grep -q "OK" || { echo "TEST 8 FAIL: R bridge broken"; exit 1; }
 
 # Test 9: Sample literature query through LEANN

@@ -1,6 +1,17 @@
 # Harness Verdict — May 2026
 
-## TL;DR Stack
+> **⚠️ HISTORICAL DOCUMENT** — this captures the comparison work from v0.2.0 (May 2026).
+> The actual current pick has evolved through subsequent versions:
+>
+> - **Inference** (v0.6.1+): `llama-server` (GGUF) on non-Apple-Silicon, `mlx_lm.server` (MLX) on M-series. **LM Studio dropped** as "just llama.cpp with proprietary UI." Ollama considered as alternative path (port 11434 conflict handled by Phase 0 PRE-CHECK).
+> - **Daily-use harness** (v0.9.2+): **Hermes Agent CLI/TUI** via `pip install hermes-agent`. Hermes Agent **Desktop** referenced earlier doesn't ship as a separate app — the TUI is the available product (verified May 19, 2026). **Goose dropped** (v0.4.0). **OpenCode dropped** (v0.6.0+); Hermes is sole harness.
+> - **Skill format**: SKILL.md confirmed and unchanged.
+>
+> For the actual current architecture, see [SETUP_PROMPT.md](../SETUP_PROMPT.md) and [CHANGELOG.md](../CHANGELOG.md).
+>
+> This doc is kept as a record of *why* the picks evolved.
+
+## TL;DR Stack (as of v0.2.0 — superseded; see header note above)
 
 | Layer | Pick | Version | License | Why won |
 |---|---|---|---|---|

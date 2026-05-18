@@ -18,12 +18,27 @@ done
 [ -z "$TASK" ] && { echo "FAIL: --task required"; exit 1; }
 [ -z "$SCHEDULE" ] && { echo "FAIL: --schedule required (daily-03 | weekly-sun-04)"; exit 1; }
 
-# Locate the cron task SKILL.md
+# Locate the cron task SKILL.md — respects $LOCAL_AGENT_SETUP env var
+# Source the setup-env if available (set during PRE-CHECK in SETUP_PROMPT.md)
+[ -f ~/.research/setup-env ] && source ~/.research/setup-env
+
+# Fall back to auto-detection if env var not set
+if [ -z "${LOCAL_AGENT_SETUP:-}" ]; then
+    for candidate in ~/local-agent-setup ~/Projects/local-agent-setup ~/code/local-agent-setup ~/Documents/local-agent-setup .; do
+        if [ -f "$candidate/SETUP_PROMPT.md" ]; then
+            LOCAL_AGENT_SETUP=$(cd "$candidate" && pwd)
+            break
+        fi
+    done
+fi
+
+[ -z "$LOCAL_AGENT_SETUP" ] && { echo "FAIL: \$LOCAL_AGENT_SETUP not set and cannot auto-detect"; exit 1; }
+
 TASK_DIR=""
-for candidate in ~/local-agent-setup/cron/daily/$TASK ~/local-agent-setup/cron/weekly/$TASK; do
+for candidate in "$LOCAL_AGENT_SETUP/cron/daily/$TASK" "$LOCAL_AGENT_SETUP/cron/weekly/$TASK"; do
     if [ -d "$candidate" ]; then TASK_DIR="$candidate"; break; fi
 done
-[ -z "$TASK_DIR" ] && { echo "FAIL: task $TASK not found in cron/daily or cron/weekly"; exit 1; }
+[ -z "$TASK_DIR" ] && { echo "FAIL: task $TASK not found in cron/daily or cron/weekly under $LOCAL_AGENT_SETUP"; exit 1; }
 
 # Calendar interval per schedule
 case "$SCHEDULE" in
