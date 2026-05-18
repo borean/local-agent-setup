@@ -12,13 +12,15 @@
 
 You are setting up a medical research workstation for a Turkish pediatric endocrinologist (or their colleague). Read these BEFORE touching the system:
 
-1. `/Users/$USER/local-agent-setup/README.md` — overview
-2. `/Users/$USER/local-agent-setup/docs/local_llm_plan.md` — architecture + compliance
-3. `/Users/$USER/local-agent-setup/docs/v3_changes.md` — latest design decisions
-4. `/Users/$USER/local-agent-setup/docs/harness_brief.md` — why Hermes Agent Desktop won
-5. `/Users/$USER/local-agent-setup/system-prompts/karpathy-12-rules.md` — apply these rules to your own work during setup
-6. `/Users/$USER/local-agent-setup/references/compliance-primer.md` — KVKK/GDPR/HIPAA
-7. `/Users/$USER/local-agent-setup/references/preflight-install-order.md` — the 5-step install order (you will execute it as Phase 0)
+1. `$LOCAL_AGENT_SETUP/README.md` — overview
+2. `$LOCAL_AGENT_SETUP/docs/local_llm_plan.md` — architecture + compliance
+3. `$LOCAL_AGENT_SETUP/docs/v3_changes.md` — latest design decisions
+4. `$LOCAL_AGENT_SETUP/docs/harness_brief.md` — why Hermes Agent Desktop won
+5. `$LOCAL_AGENT_SETUP/system-prompts/karpathy-12-rules.md` — apply these rules to your own work during setup
+6. `$LOCAL_AGENT_SETUP/references/compliance-primer.md` — KVKK/GDPR/HIPAA
+7. `$LOCAL_AGENT_SETUP/references/preflight-install-order.md` — the 5-step install order (you will execute it as Phase 0)
+8. `$LOCAL_AGENT_SETUP/references/storage-requirements.md` — disk space breakdown (verified May 2026)
+9. `$LOCAL_AGENT_SETUP/lessons.md` — append every workaround you discover to BOTH this repo file AND `~/.research/lessons.md`
 
 After reading: you understand that **you (the frontier model) will be uninstalled after setup**. The human's daily-use stack will be:
 - `llama-server` (llama.cpp Metal) on `localhost:11434` serving Qwen 3.6 27B or 35B-A3B
@@ -72,6 +74,69 @@ Run these exact questions back-to-back. Capture answers; do not ask again.
 ```
 
 After this block, commit each answer to `~/.research/setup-answers.yaml` for audit.
+
+---
+
+## PRE-CHECK — port collision + clone-path env var
+
+Before Phase 0, two quick checks to avoid downstream pain:
+
+```bash
+# 1. Port 11434 collision check
+# Ollama uses :11434 by default. If user has Ollama running, decide:
+#   (a) stop Ollama (preferred — single inference backend)
+#   (b) remap our llama-server to :11444 (skill defaults work; downstream needs update)
+#   (c) accept Ollama as the inference backend (sk-everything-else; complex)
+if lsof -i :11434 >/dev/null 2>&1; then
+    PID=$(lsof -t -i :11434 | head -1)
+    BIN=$(ps -p $PID -o comm= 2>/dev/null)
+    echo "⚠️ Port 11434 already in use by: $BIN (pid $PID)"
+    echo "Options:"
+    echo "  (a) Stop the process — recommended if it's Ollama. Run: 'ollama serve stop' or 'kill $PID'"
+    echo "  (b) Remap llama-server to :11444 — set LLAMA_PORT=11444 before continuing"
+    echo "  (c) Use the existing :11434 inference backend (manual config; advanced)"
+    echo ""
+    read -p "Pick a (stop), b (remap), or c (accept) — or quit (q): " choice
+    case "$choice" in
+        a) kill $PID ; sleep 2 ;;
+        b) export LLAMA_PORT=11444 ; export LFM_PORT=11446 ;;
+        c) export USE_EXISTING_INFERENCE=true ; echo "Manual config — TODO in lessons.md" ;;
+        *) exit 1 ;;
+    esac
+fi
+LLAMA_PORT=${LLAMA_PORT:-11434}
+LFM_PORT=${LFM_PORT:-11436}
+
+# 2. LOCAL_AGENT_SETUP env var — the repo location
+# Don't hardcode ~/local-agent-setup; let user clone anywhere
+if [ -z "${LOCAL_AGENT_SETUP:-}" ]; then
+    # Try common locations
+    for candidate in ~/local-agent-setup ~/Projects/local-agent-setup ~/code/local-agent-setup ~/Documents/local-agent-setup .; do
+        if [ -f "$candidate/SETUP_PROMPT.md" ]; then
+            export LOCAL_AGENT_SETUP=$(cd "$candidate" && pwd)
+            echo "✓ Repo found at: $LOCAL_AGENT_SETUP"
+            break
+        fi
+    done
+    if [ -z "$LOCAL_AGENT_SETUP" ]; then
+        echo "FAIL: cannot find the local-agent-setup repo."
+        echo "Either clone it: git clone https://github.com/borean/local-agent-setup ~/local-agent-setup"
+        echo "Or set LOCAL_AGENT_SETUP=/path/to/your/clone explicitly."
+        exit 1
+    fi
+fi
+
+# Persist these to ~/.research/setup-env for downstream phases
+mkdir -p ~/.research
+cat > ~/.research/setup-env <<EOF
+export LOCAL_AGENT_SETUP=$LOCAL_AGENT_SETUP
+export LLAMA_PORT=$LLAMA_PORT
+export LFM_PORT=$LFM_PORT
+EOF
+echo "✓ Setup env saved to ~/.research/setup-env"
+```
+
+After the pre-check: all later phases use `$LOCAL_AGENT_SETUP`, `$LLAMA_PORT`, and `$LFM_PORT` instead of hardcoded `~/local-agent-setup` / `11434` / `11436`. Source `~/.research/setup-env` if running phases in a new shell.
 
 ---
 
@@ -330,7 +395,7 @@ If both services respond: Phase 1 complete.
 mkdir -p ~/.agents/{skills,hooks,system-prompts,state}
 
 # System prompts — concatenate Karpathy + air-gap preamble
-cp ~/local-agent-setup/system-prompts/karpathy-12-rules.md ~/.agents/system-prompts/
+cp $LOCAL_AGENT_SETUP/system-prompts/karpathy-12-rules.md ~/.agents/system-prompts/
 cat > ~/.agents/system-prompts/air-gap-preamble.md <<'PROMPT'
 ## Air-gap mode preamble
 
@@ -351,10 +416,10 @@ Rules in addition to Karpathy 12:
 PROMPT
 
 # Skills — copy entire bundle
-cp -r ~/local-agent-setup/skills/* ~/.agents/skills/
+cp -r $LOCAL_AGENT_SETUP/skills/* ~/.agents/skills/
 
 # Hooks — copy and ensure executable
-cp ~/local-agent-setup/hooks/*.sh ~/.agents/hooks/
+cp $LOCAL_AGENT_SETUP/hooks/*.sh ~/.agents/hooks/
 chmod +x ~/.agents/hooks/*.sh
 
 # Voice profile placeholder (will be filled in Phase 5)
@@ -362,8 +427,8 @@ touch ~/.agents/system-prompts/${USERNAME}-voice.md
 
 # Pin upstream cherry-pick commits
 # (For each coding/{google,mattpocock,vercel,shadcn} skill, fetch the pinned content)
-# We do this as a separate script ~/local-agent-setup/scripts/pin-cherry-picks.sh
-bash ~/local-agent-setup/scripts/pin-cherry-picks.sh
+# We do this as a separate script $LOCAL_AGENT_SETUP/scripts/pin-cherry-picks.sh
+bash $LOCAL_AGENT_SETUP/scripts/pin-cherry-picks.sh
 ```
 
 ---
@@ -378,18 +443,18 @@ brew install --cask basictex  # smaller TeX install; sufficient for Quarto/journ
 # Python venv via uv
 python3.13 -m venv ~/.research/venv
 source ~/.research/venv/bin/activate
-uv pip install -r ~/local-agent-setup/setup-prompts/medical-research-requirements.txt
+uv pip install -r $LOCAL_AGENT_SETUP/setup-prompts/medical-research-requirements.txt
 
 # Verify Python stack
 python -c "import pandas, numpy, scipy, statsmodels, lifelines, pingouin, matplotlib, seaborn; print('Python OK')"
 
 # Wheelhouse fallback for offline future installs
 mkdir -p ~/.research/wheelhouse
-uv pip download -r ~/local-agent-setup/setup-prompts/medical-research-requirements.txt -d ~/.research/wheelhouse/
+uv pip download -r $LOCAL_AGENT_SETUP/setup-prompts/medical-research-requirements.txt -d ~/.research/wheelhouse/
 
 # R via renv
 R --vanilla -e 'install.packages("renv", repos="https://cran.rstudio.com")'
-Rscript ~/local-agent-setup/setup-prompts/medical-research-renv.R
+Rscript $LOCAL_AGENT_SETUP/setup-prompts/medical-research-renv.R
 
 # Verify R stack
 R --vanilla -e 'library(tidyverse); library(gtsummary); library(survival); library(meta); cat("R OK\n")'
@@ -422,8 +487,8 @@ huggingface-cli download \
     --local-dir ~/.research/models
 
 # Guideline caches (the slow part — but worth it)
-# We curate a list per society in ~/local-agent-setup/scripts/download-guidelines.sh
-bash ~/local-agent-setup/scripts/download-guidelines.sh \
+# We curate a list per society in $LOCAL_AGENT_SETUP/scripts/download-guidelines.sh
+bash $LOCAL_AGENT_SETUP/scripts/download-guidelines.sh \
     --societies "magicapp,ispad,espe,cedd,aap,ata" \
     --output ~/Research/cache/guidelines/
 
@@ -431,7 +496,7 @@ bash ~/local-agent-setup/scripts/download-guidelines.sh \
 # Note: ceddcozum-style Neyzi LMS data lives INSIDE the ceddcozum CLI tool
 # (33 calculator functions in v0.2.2). We integrate that in Phase 5 as
 # live callable tools, not as exported data. Don't try to extract here.
-bash ~/local-agent-setup/scripts/download-references.sh \
+bash $LOCAL_AGENT_SETUP/scripts/download-references.sh \
     --output ~/Research/cache/references/
 
 # Journal LaTeX templates
@@ -452,10 +517,10 @@ Generate the user's field-specific voice baseline **fresh from current author gu
 FIELD_SLUG=$(echo "$FIELD" | tr ' /' '-' | tr 'A-Z' 'a-z')
 
 # 1. Check if we have a reference example to use as a structural template
-EXAMPLE=~/local-agent-setup/references/field-preset-examples/${FIELD_SLUG}.md
+EXAMPLE=$LOCAL_AGENT_SETUP/references/field-preset-examples/${FIELD_SLUG}.md
 if [ ! -f "$EXAMPLE" ]; then
     # Fall back to peds-endo example as structure (its sections generalize)
-    EXAMPLE=~/local-agent-setup/references/field-preset-examples/pediatric-endocrinology.md
+    EXAMPLE=$LOCAL_AGENT_SETUP/references/field-preset-examples/pediatric-endocrinology.md
     echo "  ℹ️  No example for '$FIELD'; using peds-endo as structural template"
 fi
 
@@ -531,7 +596,7 @@ ceddcozum auxology --args '{"sex":"male","age":5.5,"height":110,"weight":19}' --
 
 # Install the wrapper that Hermes Agent will use to dispatch calls
 # (This skill becomes available immediately; details in skills/coding/bora/ceddcozum-tools/SKILL.md)
-cp -r ~/local-agent-setup/skills/coding/bora/ceddcozum-tools ~/.agents/skills/coding/bora/
+cp -r $LOCAL_AGENT_SETUP/skills/coding/bora/ceddcozum-tools ~/.agents/skills/coding/bora/
 ```
 
 What the agent can do after this phase:
@@ -618,7 +683,7 @@ ACTION REQUIRED — install Little Snitch profile:
 
 1. Little Snitch Configuration is open.
 2. File → Import Rules…
-3. Pick: ~/local-agent-setup/setup-prompts/little-snitch-research-mode.lsrules
+3. Pick: $LOCAL_AGENT_SETUP/setup-prompts/little-snitch-research-mode.lsrules
 4. In the toolbar, switch profile dropdown to "Research Mode"
 5. Confirm by checking the menu-bar icon shows "Research Mode" active.
 
@@ -655,12 +720,12 @@ mkdir -p ~/Library/LaunchAgents
 
 for task in airgap-nightly-handoff llama-server-health audit-rotate leann-index-refresh; do
     # Daily tasks at 03:00-03:45
-    bash ~/local-agent-setup/scripts/install-cron.sh --task "$task" --schedule "daily-03"
+    bash $LOCAL_AGENT_SETUP/scripts/install-cron.sh --task "$task" --schedule "daily-03"
 done
 
 for task in manuscript-snapshot passport-cleanup skill-usage-report; do
     # Weekly tasks Sunday 04:00-05:00
-    bash ~/local-agent-setup/scripts/install-cron.sh --task "$task" --schedule "weekly-sun-04"
+    bash $LOCAL_AGENT_SETUP/scripts/install-cron.sh --task "$task" --schedule "weekly-sun-04"
 done
 
 # Verify

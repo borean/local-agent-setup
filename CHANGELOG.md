@@ -1,5 +1,76 @@
 # Changelog
 
+## [0.9.1] — 2026-05-19 — Storage table, lessons.md, three deferred items
+
+### Added — verified storage requirements
+
+[`references/storage-requirements.md`](references/storage-requirements.md) — pulled actual sizes from Hugging Face API May 19, 2026:
+
+- **Qwen 3.6 35B-A3B GGUF UD-Q4_K_M: 20.61 GB** (Unsloth's "UD" dynamic quant variant — the right one to pick)
+- **Qwen 3.6 35B-A3B MLX 4bit: 19.03 GB**
+- **Qwen 3.6 27B dense GGUF Q4_K_M: 15.66 GB**
+- **Qwen 3.6 27B dense MLX 4bit: ~15 GB**
+- **LFM2.5-350M Q8_0 GGUF: 362 MB** (Q4_K_M: 219 MB)
+- **Turkish-Gemma-9b-T1 Q4_K_M GGUF: 5.37 GB**
+- **bge-m3 embedding: 2.14 GB**
+
+Plus non-model storage breakdown: Python venv (3-5 GB), wheelhouse (3-5 GB), R packages (~2 GB), BasicTeX (~100 MB), LEANN index (6-12 GB), Quarto extensions, journal templates, audit logs, manuscript snapshots.
+
+**Bora's full install (peds endo, both models, Turkish, full venv, LEANN)**: ~64 GB.
+**Recommended free disk**: 80 GB.
+**Comfortable**: 100+ GB.
+**Minimum viable (one Qwen, English, no extras)**: ~30 GB.
+
+README hardware section updated with these numbers + clear "32 GB RAM minimum / 80 GB disk recommended" framing — chip/OS is platform-specific advice, not a hard gate.
+
+### Added — `lessons.md` (live install-friction changelog)
+
+Top-level file. Pre-populated with the v0.9.0 known issues + slots for real-install entries.
+
+The `SETUP_PROMPT.md` instructs the frontier LLM doing setup to **append to both** `lessons.md` (in the repo, gets PR'd back for shared benefit) AND `~/.research/lessons.md` (local, machine-specific). Format per entry: Machine / Phase / Symptom / Cause / Fix / Repo change.
+
+### Fixed — port 11434 collision with Ollama
+
+`SETUP_PROMPT.md` now has a **PRE-CHECK** block before Phase 0:
+
+```bash
+if lsof -i :11434 >/dev/null 2>&1; then
+    # Detect Ollama or other; prompt user: (a) stop, (b) remap, (c) accept
+fi
+LLAMA_PORT=${LLAMA_PORT:-11434}
+LFM_PORT=${LFM_PORT:-11436}
+```
+
+If user has Ollama running, they pick: stop / remap our llama-server to :11444 / accept existing as backend. Choice persisted to `~/.research/setup-env` for downstream phases.
+
+### Fixed — `$LOCAL_AGENT_SETUP` env var replaces hardcoded clone path
+
+All references in `SETUP_PROMPT.md` to `~/local-agent-setup/<path>` replaced with `$LOCAL_AGENT_SETUP/<path>`. Auto-detection in PRE-CHECK tries `~/local-agent-setup`, `~/Projects/local-agent-setup`, `~/code/local-agent-setup`, `~/Documents/local-agent-setup`, `.` — whichever has `SETUP_PROMPT.md`. User can override by setting `LOCAL_AGENT_SETUP=/path/to/clone` before pasting the prompt.
+
+Initial Context references (`/Users/$USER/local-agent-setup/...`) also updated to `$LOCAL_AGENT_SETUP/...`.
+
+### Fixed — `pin-cherry-picks.sh` now persists resolved SHAs
+
+Previously: resolved `main` to SHA at run-time, fetched, but didn't write SHA back. Next run re-resolved `main` and pulled different commits.
+
+Now: writes resolved pins to `~/.agents/state/cherry-pick-pins.yaml`. On subsequent runs, reads from there (skips re-resolve unless `--refresh` flag passed). Each skill's `SKILL.md` frontmatter also gets `upstream.commit: <sha>` + `upstream.fetched_at: <iso>` for per-skill audit.
+
+```yaml
+# ~/.agents/state/cherry-pick-pins.yaml (auto-generated)
+addyosmani/agent-skills: 7a3f9e1c0a89b6e8f4d2a1b9c8d7e6f5a4b3c2d1
+mattpocock/skills:       b8c4d2a1e9f8a7b6c5d4e3f2a1b9c8d7e6f5a4b3
+vercel-labs/agent-skills: c2d1b9c8d7e6f5a4b3c2d1b9c8d7e6f5a4b3c2d1
+shadcn-ui/ui:            d3e2c1b0a9f8e7d6c5b4a3928e7d6c5b4a3928e7
+```
+
+Refresh via `pin-cherry-picks.sh --refresh`. Quarterly cadence + run eval suite before merging the bump.
+
+### Updated — confirmed Unsloth's UD-Q4_K_M is the right variant
+
+ChatGPT v0.8.0 review note: the model name uses Unsloth's "UD" (Unsloth Dynamic) prefix. Confirmed by HF API — `Qwen3.6-35B-A3B-UD-Q4_K_M.gguf` is the correct download name (20.61 GB), not the plain `Qwen3.6-35B-A3B-Q4_K_M.gguf` I had assumed earlier. Phase 1 download commands + storage doc updated.
+
+---
+
 ## [0.9.0] — 2026-05-19 — Hotfix: bugs caught by ChatGPT/Cursor/Grok 3-way review
 
 After the user pasted the v0.8.0 repo URL into ChatGPT, Cursor Composer 2.5, and Grok for an implementation feasibility review, all three reviews converged on the same handful of real bugs. Fixing.

@@ -10,7 +10,19 @@ A fully-local, air-gapped LLM environment for medical research — statistics, l
 
 A reproducible spec + skill bundle for setting up an air-gapped, open-weight LLM environment.
 
-**Hardware**: 32 GB RAM minimum for Qwen 3.6 35B-A3B Q4. Apple Silicon Mac is recommended (unified memory + MLX = ~80 tok/s), but Linux (CUDA/ROCm) and Windows (CUDA, WSL2 preferred) are supported via the GGUF + llama.cpp path. The truly Mac-only pieces (Little Snitch, launchctl) have Linux/Windows equivalents documented in `references/cross-platform-notes.md`.
+**Hardware requirements** (universal — chip/OS is advice, not a gate):
+
+- **32 GB RAM minimum** for Qwen 3.6 35B-A3B Q4 (~21 GB model + ~10 GB working set)
+- **80 GB free disk recommended** (~64 GB for full install: both Qwen models + LFM router + venv + R + LEANN + caches)
+- See [references/storage-requirements.md](references/storage-requirements.md) for the verified per-component breakdown
+- See [references/cross-platform-notes.md](references/cross-platform-notes.md) for Linux + Windows equivalents
+
+**Platform recommendations** (in order of smoothness):
+
+1. **Apple Silicon Mac (M3/M4)** — recommended; MLX path gives ~80 tok/s for Qwen 3.6 35B-A3B
+2. **Linux (Ubuntu/Fedora) with NVIDIA GPU (CUDA) or AMD GPU (ROCm)** — fully supported via GGUF + llama.cpp; substitute systemd timers for launchctl, `ufw` for Little Snitch
+3. **Windows (WSL2 + NVIDIA)** — supported via WSL2 (Linux flow inside); native Windows is more friction
+4. **Apple Silicon Mac, 16 GB RAM** — drop to Qwen 3.6 8B or 14B; the 35B-A3B path is painful here
 
 - **Inference**: `llama-server` (llama.cpp Metal build) on `localhost:11434`
 - **Models**: Qwen 3.6 27B dense (writing/reasoning) + Qwen 3.6 35B-A3B MoE (coding/agentic), one at a time
