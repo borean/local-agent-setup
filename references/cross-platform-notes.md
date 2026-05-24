@@ -120,7 +120,7 @@ The realistic Windows path is **WSL2 + Linux flow**. Native Windows works but wi
 
 1. Install WSL2 (`wsl --install`)
 2. Follow Linux instructions inside WSL
-3. Hermes Agent Desktop installs native on Windows but talks to WSL2's `localhost:11434` (port forwarding works by default)
+3. Hermes Agent runs inside WSL2 (TUI in `wsl bash`); reach the local model via WSL2's `localhost:11434` (port forwarding works by default). Per Hermes v0.14.0 (May 2026), a native-Windows beta exists for the CLI/TUI — usable but rough at the edges. Nous's native Desktop GUI is still on the roadmap (not released).
 
 For a no-WSL native path: install Ollama (it's native Windows + has GGUF support), point Hermes Agent at it, accept the simpler-but-non-Hermes-native-tool-call architecture.
 

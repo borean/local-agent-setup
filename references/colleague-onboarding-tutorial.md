@@ -1,16 +1,17 @@
 # Colleague Onboarding — Air-Gapped Local LLM for Academic Research
 
 **Adapted from**: an excellent 5-part Claude Code tutorial for academic researchers (author unknown; surfaced from a curated link digest).
-**Adapted for**: our air-gapped local Qwen 3.6 stack via Hermes Agent Desktop. No Claude Code, no internet, no terminal.
-**Audience**: clinician colleagues with no programming background. The author writes: *"If you can write sentences in English, you can use Hermes Agent Desktop."*
+**Adapted for**: our air-gapped local Qwen 3.6 stack via the **Hermes Agent TUI**. No Claude Code, no internet, no daily terminal work after setup. The TUI is terminal-hosted but keyboard-driven and chat-shaped — once you double-click `~/Desktop/Hermes.command`, you're inside it.
+**About "Hermes Desktop"**: Nous Research has a native Desktop client on its roadmap (`desktop-pr20059-installers` tag). It is not released yet. When it ships, the swap is ~5 minutes — replace the `.command` shortcut with the Desktop app launcher. Skills, hooks, audit, system prompts don't change. Until then, the TUI is the daily harness.
+**Audience**: clinician colleagues with no programming background. *"If you can write sentences in English, you can use Hermes Agent."*
 
 ---
 
 ## Part 1 — What is this?
 
-You install **Hermes Agent Desktop** on your computer just like you would Zoom or Zotero. Once installed, you point it at a folder on your computer (dissertation, paper, project) and let it work inside that folder. It can read every file, edit existing files, and create new ones. It remembers what you were working on between sessions.
+Your AI agent (Claude Code, Codex, or Gemini CLI — whichever you currently use) installs **Hermes Agent** on your computer the first time. After that, you launch Hermes by double-clicking a shortcut on your Desktop. It opens a chat-shaped terminal window that you type into in plain English. You point it at a folder on your computer (dissertation, paper, project) and let it work inside that folder. It can read every file, edit existing files, and create new ones. It remembers what you were working on between sessions.
 
-Unlike browser-based AI (ChatGPT, Gemini, etc.) which can only "talk," Hermes Desktop can actually **"do"** things with your files.
+Unlike browser-based AI (ChatGPT, Gemini, etc.) which can only "talk," Hermes can actually **"do"** things with your files.
 
 **The crucial difference from Claude Code**: Hermes runs against your *own* local Qwen 3.6 model. **Nothing leaves your computer.** Patient data stays on disk. KVKK / GDPR / HIPAA all satisfied at the technical level.
 
@@ -20,7 +21,7 @@ You have a folder full of PDFs, paper drafts, datasets, interview transcripts. Y
 
 ### What it's not
 
-Hermes Desktop is powerful but it is **not** a replacement for your expert judgment. It can draft, summarize, code — what counts as argument or evidence is your responsibility. Treat it as a research assistant, not as a brain transplant.
+Hermes is powerful but it is **not** a replacement for your expert judgment. It can draft, summarize, code — what counts as argument or evidence is your responsibility. Treat it as a research assistant, not as a brain transplant.
 
 ---
 
@@ -38,15 +39,19 @@ Set aside 15-20 minutes the first time. After that, you never need the terminal 
 6. When it prints the hand-off message:
    - **Uninstall the frontier LLM** (System Settings → General → Apps → Uninstall)
    - **Flip Little Snitch menu** → switch to **"Research Mode"**
-   - **Launch Hermes Agent Desktop** from your Applications folder
+   - **Launch Hermes** by double-clicking `~/Desktop/Hermes.command` (Terminal opens with the Hermes TUI running — you never type a terminal command yourself)
 
 That's the only time you'll need any of that.
 
 ### What a session looks like
 
-Open Hermes Desktop. You see a chat panel on the right, a list of past conversations on the left, and a button to **Open Folder** at the top.
+Double-click `~/Desktop/Hermes.command` on your Desktop. A Terminal window opens with the Hermes TUI — a clean keyboard-driven chat panel, your previous sessions listed in a sidebar, and a status line at the bottom. No mouse needed.
 
-Click Open Folder. Navigate to a folder with your research files. Hermes is now "inside" that folder. It can read every file and every subfolder.
+To work inside a specific folder, type:
+
+> *"Open the folder /Users/yourname/Documents/My-Dissertation."*
+
+Hermes is now "inside" that folder. It can read every file and every subfolder. (Or, if you prefer, `cd` into the folder *before* double-clicking the shortcut — Hermes starts in whatever directory the shortcut was launched from.)
 
 In the chat, type:
 
