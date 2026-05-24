@@ -66,7 +66,9 @@ If we used your work and missed you, open an issue — we'll add you immediately
 - **Yuan1z0825** — `nature-skills` (4.5k⭐) — Nature-journal Matplotlib pattern (SVG + 300dpi)
 - **@pie6k** — OKLCH color model evangelism (random hue slider stays harmonious)
 - **Bang Wong** — color-blind safe palette (Nature Methods 2011)
-- **Cole Nussbaumer Knaflic** — *Storytelling with Data* (general data-viz philosophy)
+- **Edward Tufte** — *The Visual Display of Quantitative Information* (Graphics Press, 1983/2001). The nine criteria of graphical excellence + the seven remedies (B1–B7) underpin `references/dataviz-principles.md` Part I.
+- **gnurio** — `tufte-vdqi-plugin` / Chartwright (MIT, ~6k⭐). The criteria-plus-remedies encoding of Tufte's principles was lifted from their `tufte-principles.md` and adapted into `references/dataviz-principles.md` Part I.
+- **Cole Nussbaumer Knaflic** — *Storytelling with Data* (Wiley, 2015). The six lessons (context → visual → clutter → attention → designer → story) plus active titles, preattentive attributes, strategic color are the basis of `references/dataviz-principles.md` Part II.
 - **Mitchell Hashimoto** — Ghostty auto-256-from-16 color theme generation pattern
 - **@DataChaz** — TOON (we ultimately sacked it per Bora's past experience, but credit for the concept)
 

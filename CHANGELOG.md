@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.10.0] — 2026-05-24 — Tufte + SwD data-viz principles integrated
+
+### Added — `references/dataviz-principles.md`
+
+A canonical 267-line principles file in two parts:
+
+- **Part I — Tufte (VDQI, 1983)**: the 9 criteria for graphical excellence + the 7 remedies (B1 lie factor, B2 range frames, B3 small multiples, B4 integrated labels, B5 erase non-data ink, B6 erase redundant data ink, B7 monetary deflation). Encoding adapted from gnurio/tufte-vdqi-plugin (MIT) — the criteria-plus-remedies form is more usable as an audit framework than Tufte's original prose.
+- **Part II — Knaflic (Storytelling with Data, 2015)**: the 6 lessons (context → visual → clutter → attention → designer → story) covering audience-driven framing, the Big Idea / 3-minute story, chart-type selection rules, Gestalt-driven decluttering, preattentive attributes for strategic color, and active titles.
+
+The two are complementary: Tufte sets the mechanical floor (data integrity, ink economy); SwD sets the rhetorical ceiling (audience, narrative). A chart that fails Part I is wrong; a chart that passes Part I but fails Part II is correct but mute.
+
+Findings are cited by code: `T-B1`, `T-B5`, `S-L4.2`, etc. Combined audit checklist at the bottom of the file for one-pass review.
+
+### Updated — 6 visualization skills cite the principles file
+
+Surgical edits, one "Design principles" subsection each, tailored to that chart type:
+
+- **`chart-spec`** — bias recommendations toward dot plots over bars (T-B6), small multiples over grouped/stacked bars (T-B3), one color per categorical dimension (T-B5), and the "what action does this support?" question (S-L1).
+- **`figure-validate`** — new advisory pass: flag non-zero bar baselines (T-B1), decorative color (T-B5), pie/donut (T-B6), secondary y-axis (S-L2), and descriptive titles (S-L7). Warning-level alongside the existing DPI / font / Turkish-char / Wong-palette checks; the clinician decides what to act on.
+- **`km-curve`** — direct end labels in each curve's color (T-B4), range frame on time axis (T-B2), light CI bands (T-B5), small multiples for subgroups (T-B3), active titles carrying the takeaway (S-L7). Clinical conventions (at-risk table, log-rank p, censoring ticks, median annotation) stay put.
+- **`nature-figure`** — strip panel frames + gridlines (T-B5), integrate panel letters inside the data area (T-B4), share axes across panels (T-B3), no double-encoding (T-B6), default to one color (S-L4.1), active title scaffold (S-L7). Nature's 8 pt / Wong palette / 300 dpi requirements stay.
+- **`forest-plot`** — range frame on effect axis (T-B2), small multiples for subgroup analyses (T-B3), active title with pooled effect + p (S-L7). Meta-analysis conventions (diamond, weights, I², τ², Egger) stay.
+- **`color-palette`** — recommendation defaults shift: one muted color when categorical dimension is absent, one accent + gray when emphasizing, sequential gradient for ordinal data. The Wong/OKLCH machinery underneath is unchanged.
+
+### Out of scope
+
+- **`patient-flow-sankey`** — CONSORT 2010 conventions are regulator-driven; reviewer pushback risk if we deviate. Left alone.
+- **`react-best-practices`, `react-view-transitions`, `web-design-guidelines`** — UI, not data viz.
+
+### Updated — `CREDITS.md`
+
+Edward Tufte, gnurio/tufte-vdqi-plugin (MIT), and Cole Nussbaumer Knaflic are now credited under the "Skills, data-viz, and infrastructure intel" section with the specific section they underpin in the principles file.
+
+### Net diff
+
+8 files: 1 new (`references/dataviz-principles.md`), 6 skill edits, CHANGELOG, CREDITS. No skill rename, no breaking change, no new dependency. The principles file is the single source of truth; each skill cites it by code.
+
+---
+
 ## [0.9.6] — 2026-05-19 — Disk-space pre-check + MLX repo name fix
 
 Final pre-install 4-way audit (Claude / Grok / Cursor / ChatGPT) caught two real bugs after v0.9.5 already addressed most signals. Claude + Grok were reading stale snapshots (pre-v0.9.5), so their flags about "missing skill files" and "8-question pre-flight with Hermes Desktop" don't apply. Cursor + ChatGPT each surfaced one real issue.
